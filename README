@@ -1,22 +1,25 @@
-This is a stub README for a new TiddlyWeb plugin.
+A plugin for TiddlyWeb subclassing tiddlywebplugins.sqlalchemy with mysql specifics.
 
-The entire maker package provides a sort of fill in the blank
-opportunity for creating TiddlyWeb plugins in the tiddylwebplugins
-namespace.
+The main additions here are two:
 
-Rename tiddlywebplugins/example.py to the name you want to use for
-your plugin. Edit setup.py to set the variables at the top of the 
-file. Edit your plugin file to add the necessary code. Edit this
-README so it provides a description of the plugin.
+* Provide a reasonable search interface using mysql's freetext.
+* Provide an index_query method to allow the plugin to be used as
+  an 'indexer' for filters and determine_bag_for_tiddler.
 
-Put some tests, if you wish, in the tests dir. TiddlyWeb uses py.test
-as its testing harness. http://pytest.org/
+This means we'll be incorporating code learnings from
+tiddlywebplugins.whoosher and tiddlywebplugins.mappinsql. In fact
+this plugin is being built to replace tiddlywebplugins.whoosher
+which doesn't handle concurrency well.
 
-See http://www.python.org/~jeremy/weblog/030924.html for some
-info on how to register for PyPI.
+Copyright 2010, Chris Dent <cdent@peermore.com>
 
-If you have suggestions for things to add to maker post at the
-TiddlyWeb Google Group: http://groups.google.com/group/tiddlyweb
+Licensed as TiddlyWeb itself.
 
-To start with maker itself clone this repo, and then remove .git
-directory.
+NOTES
+
+It's import to set some mysql my.cnf variables otherwise searches
+will likely fail.
+
+[mysqld]
+ft_min_word_len = 3
+ft_stopword_file = ''
