@@ -23,3 +23,7 @@ will likely fail.
 [mysqld]
 ft_min_word_len = 3
 ft_stopword_file = ''
+
+The fulltext index must (for now at least) be created by hand:
+
+    create fulltext index free on revision (tiddler_title, text, tags);

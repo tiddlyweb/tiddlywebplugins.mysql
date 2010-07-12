@@ -7,12 +7,18 @@ from tiddlyweb.model.bag import Bag
 from tiddlywebplugins.utils import get_store
 
 from tiddlywebplugins.mysql import index_query
+from tiddlywebplugins.sqlalchemy import (sField, sRevision, sTiddler,
+        sBag, sRecipe, sUser, sPolicy, sPrincipal, sRole)
 
 def setup_module(module):
     module.store = get_store(config)
     module.environ = {'tiddlyweb.config': config,
             'tiddlyweb.store': module.store}
-
+    session = module.store.storage.session
+# delete everything
+    for table in (sField, sRevision, sTiddler, sBag, sRecipe, sUser,
+            sPolicy, sPrincipal, sRole):
+        session.query(table).delete()
 
 def test_simple_store():
     bag = Bag('bag1')
@@ -30,13 +36,11 @@ def test_simple_store():
 
 def test_simple_search():
     tiddlers = list(store.search('"chrisdent"'))
-
     assert len(tiddlers) == 1
     assert tiddlers[0].title == 'tiddler1'
     assert tiddlers[0].bag == 'bag1'
 
     tiddlers = list(store.search('hello'))
-
     assert len(tiddlers) == 1
     assert tiddlers[0].title == 'tiddler1'
     assert tiddlers[0].bag == 'bag1'
@@ -79,3 +83,47 @@ def test_index_query_filter_fields():
     assert tiddlers[0].title == 'tiddler1'
     assert tiddlers[0].bag == 'bag1'
     assert tiddlers[0].fields['house'] == 'cottage'
+
+def test_search_right_revision():
+    tiddler = Tiddler('revised', 'bag1')
+    tiddler.text = 'alpha'
+    tiddler.fields['house'] = 'cottage'
+    store.put(tiddler)
+    tiddler = Tiddler('revised', 'bag1')
+    tiddler.text = 'beta'
+    tiddler.fields['house'] = 'mansion'
+    store.put(tiddler)
+    tiddler = Tiddler('revised', 'bag1')
+    tiddler.text = 'gamma'
+    tiddler.fields['house'] = 'barn'
+    store.put(tiddler)
+    tiddler = Tiddler('revised', 'bag1')
+    tiddler.text = 'delta'
+    tiddler.fields['house'] = 'bungalow'
+    store.put(tiddler)
+    tiddler = Tiddler('revised', 'bag1')
+    tiddler.text = 'epsilon'
+    tiddler.fields['house'] = 'treehouse'
+    store.put(tiddler)
+
+    tiddlers = list(store.search('beta'))
+    assert len(tiddlers) == 0
+
+    tiddlers = list(store.search('epsilon'))
+    assert len(tiddlers) == 1
+    assert tiddlers[0].title == 'revised'
+    assert tiddlers[0].bag == 'bag1'
+    assert tiddlers[0].fields['house'] == 'treehouse'
+
+    kwords = {'bag': 'bag1', 'house': 'barn'}
+    tiddlers = list(index_query(environ, **kwords))
+
+    assert len(tiddlers) == 0
+
+    kwords = {'bag': 'bag1', 'house': 'treehouse'}
+    tiddlers = list(index_query(environ, **kwords))
+
+    assert len(tiddlers) == 1
+    assert tiddlers[0].title == 'revised'
+    assert tiddlers[0].bag == 'bag1'
+    assert tiddlers[0].fields['house'] == 'treehouse'
