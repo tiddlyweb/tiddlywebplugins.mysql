@@ -111,19 +111,21 @@ def test_search_right_revision():
 
     tiddlers = list(store.search('epsilon'))
     assert len(tiddlers) == 1
-    assert tiddlers[0].title == 'revised'
-    assert tiddlers[0].bag == 'bag1'
-    assert tiddlers[0].fields['house'] == 'treehouse'
+    tiddler = store.get(Tiddler(tiddlers[0].title, tiddlers[0].bag))
+    assert tiddler.title == 'revised'
+    assert tiddler.bag == 'bag1'
+    assert tiddler.fields['house'] == 'treehouse'
 
     kwords = {'bag': 'bag1', 'house': 'barn'}
     tiddlers = list(index_query(environ, **kwords))
 
+    for tiddler in tiddlers:
+        print tiddler.bag, tiddler.title, tiddler.tags, tiddler.fields
     assert len(tiddlers) == 0
 
     kwords = {'bag': 'bag1', 'house': 'treehouse'}
     tiddlers = list(index_query(environ, **kwords))
 
-    assert len(tiddlers) == 1
     assert tiddlers[0].title == 'revised'
     assert tiddlers[0].bag == 'bag1'
     assert tiddlers[0].fields['house'] == 'treehouse'
