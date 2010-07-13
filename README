@@ -27,3 +27,6 @@ ft_stopword_file = ''
 The fulltext index must (for now at least) be created by hand:
 
     create fulltext index free on revision (tiddler_title, text, tags);
+
+Thanks to Adrian Hosey <http://adrianhosey.blogspot.com/> for help over
+some SQL humps.

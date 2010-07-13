@@ -119,8 +119,6 @@ def test_search_right_revision():
     kwords = {'bag': 'bag1', 'house': 'barn'}
     tiddlers = list(index_query(environ, **kwords))
 
-    for tiddler in tiddlers:
-        print tiddler.bag, tiddler.title, tiddler.tags, tiddler.fields
     assert len(tiddlers) == 0
 
     kwords = {'bag': 'bag1', 'house': 'treehouse'}
@@ -129,3 +127,13 @@ def test_search_right_revision():
     assert tiddlers[0].title == 'revised'
     assert tiddlers[0].bag == 'bag1'
     assert tiddlers[0].fields['house'] == 'treehouse'
+
+    kwords = {'bag': 'bag1', 'tag': 'orange'}
+    tiddlers = list(index_query(environ, **kwords))
+
+    assert len(tiddlers) == 1
+
+    kwords = {'bag': 'bag1', 'tag': 'rang'}
+    tiddlers = list(index_query(environ, **kwords))
+
+    assert len(tiddlers) == 0

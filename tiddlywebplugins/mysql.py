@@ -101,8 +101,8 @@ def index_query(environ, **kwargs):
     for field in kwargs.keys():
         if field == 'tag':
             # XXX: this is insufficiently specific
-            query = (query.filter(sRevision.tags.like('%%%s%%' %
-                kwargs['tag'])))
+            query = (query.filter(sRevision.tags.op('regexp')(
+                '(^| {1})%s( {1}|$)' % kwargs['tag'])))
         elif hasattr(sRevision, field):
             query = (query.filter(getattr(sRevision,
                 field) == kwargs[field]))
