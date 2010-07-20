@@ -8,7 +8,7 @@ import logging
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ArgumentError, NoSuchTableError
-from sqlalchemy.sql.expression import and_, or_, text as text_
+from sqlalchemy.sql.expression import and_, or_, text as text_, alias
 from sqlalchemy.sql import func
 from sqlalchemy.schema import Table, PrimaryKeyConstraint
 from sqlalchemy.orm import mapper
@@ -16,22 +16,22 @@ from sqlalchemy.orm import mapper
 from tiddlyweb.model.tiddler import Tiddler
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
-        sTiddler, sRevision, sField, metadata)
+        sTiddler, sRevision, metadata, field_table)
 
 from tiddlyweb.filters import FilterIndexRefused
 
 from whoosh.qparser.default import QueryParser
 
-# import logging
-# logging.basicConfig()
-# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-# logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
+import logging
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 
 
 class sHead(object):
     def __repr__(self):
-        return '<sHead(%s:%s:%s:%s)>' % (self.bag_name, self.tiddler_title,
-                self.number)
+        return '<sHead(%s:%s:%s)>' % (self.revision_bag_name, self.revision_tiddler_title,
+                self.head_rev)
 
 
 class Store(SQLStore):
@@ -77,7 +77,6 @@ CREATE VIEW head
         query = query.filter(sHead.revision_bag_name == sRevision.bag_name)
         query = query.filter(sHead.revision_tiddler_title == sRevision.tiddler_title)
         query = query.filter(sHead.head_rev == sRevision.number)
-        query = query.filter(sHead.head_rev == sField.revision_number)
 
         ast = self.parser(search_query)[0]
         query = self.producer.produce(ast, query)
@@ -201,7 +200,7 @@ class Producer(object):
         if fieldname:
             if fieldname == 'ftitle' or fieldname == 'title':
                 fieldname = 'revision_tiddler_title'
-            if fieldname == 'bag':
+            if fieldname == 'fbag' or fieldname == 'bag':
                 fieldname = 'revision_bag_name'
 
             if fieldname == 'id':
@@ -217,8 +216,12 @@ class Producer(object):
             elif hasattr(sRevision, fieldname):
                 expression = (getattr(sRevision, fieldname) == node[0])
             else:
-                expression = and_(sField.name == fieldname,
-                        sField.value == node[0])
+                sfield_alias = alias(field_table)
+                expression = and_(sfield_alias.c.tiddler_title == sHead.revision_tiddler_title,
+                        sfield_alias.c.bag_name == sHead.revision_bag_name,
+                        sfield_alias.c.revision_number == sHead.head_rev,
+                        sfield_alias.c.name == fieldname,
+                        sfield_alias.c.value == node[0])
         else:
             expression = (text_('MATCH(revision.tiddler_title, text, tags) '
                 + 'AGAINST(:query in boolean mode)')

@@ -145,6 +145,8 @@ def test_search_follow_syntax():
     store.put(Bag('cdent_public'))
     tiddler = Tiddler('GettingStarted', 'fnd_public')
     tiddler.text = 'fnd starts'
+    tiddler.fields['house'] = 'treehouse'
+    tiddler.fields['car'] = 'porsche'
     store.put(tiddler)
     tiddler = Tiddler('GettingStarted', 'cdent_public')
     tiddler.text = 'cdent starts'
@@ -158,3 +160,18 @@ def test_search_follow_syntax():
 
     tiddlers = list(store.search(QUERY))
     assert len(tiddlers) == 2
+
+def test_search_arbitrarily_complex():
+    QUERY = 'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public) house:treehouse'
+
+    tiddlers = list(store.search(QUERY))
+    for tiddler in tiddlers:
+        print tiddler.bag, tiddler.title
+    assert len(tiddlers) == 1
+
+    QUERY = 'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public) house:treehouse car:porsche'
+
+    tiddlers = list(store.search(QUERY))
+    for tiddler in tiddlers:
+        print tiddler.bag, tiddler.title
+    assert len(tiddlers) == 1
