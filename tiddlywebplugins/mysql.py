@@ -14,10 +14,11 @@ from sqlalchemy.schema import Table, PrimaryKeyConstraint
 from sqlalchemy.orm import mapper
 
 from tiddlyweb.model.tiddler import Tiddler
+from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
-        sTiddler, sRevision, metadata, field_table)
+        sTiddler, sRevision, metadata, Session, field_table)
 
 from tiddlyweb.filters import FilterIndexRefused
 
@@ -25,8 +26,6 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
         Combine, Suppress, Optional, FollowedBy, Literal, CharsNotIn,
         Word, Keyword, Empty, White, Forward, QuotedString, StringEnd,
         ParseException)
-
-
 
 # import logging
 # logging.basicConfig()
@@ -39,22 +38,39 @@ class sHead(object):
         return '<sHead(%s:%s:%s)>' % (self.revision_bag_name, self.revision_tiddler_title,
                 self.head_rev)
 
+ENGINE = None
+SESSION = None
 
 class Store(SQLStore):
+
+    HEAD = None
+    mapped = False
 
     def _init_store(self):
         """
         Establish the database engine and session,
         creating tables if needed.
         """
-        SQLStore._init_store(self)
-
+        global ENGINE, SESSION
+        if not ENGINE:
+            ENGINE = create_engine(self._db_config(), pool_recycle=3600)
+        metadata.bind = ENGINE
+        Session.configure(bind=ENGINE)
+        if not SESSION:
+            SESSION = Session()
+        self.session = SESSION
+        self.serializer = Serializer('text')
         self.parser = DEFAULT_PARSER
         self.producer = Producer()
 
+        if not Store.mapped:
+            metadata.create_all(ENGINE)
+            Store.mapped = True
+
         try:
-            head_table = self._load_head_table()
+            self._load_head_table()
         except NoSuchTableError:
+            print 'creating view HEAD'
             self.session.execute("""
 CREATE VIEW head
   AS SELECT revision.bag_name AS revision_bag_name,
@@ -62,36 +78,39 @@ CREATE VIEW head
     max(revision.number) AS head_rev
   FROM revision GROUP BY revision.bag_name, revision.tiddler_title;
 """)
-            head_table = self._load_head_table()
-
-        try:
-            mapper(sHead, head_table)
-        except ArgumentError, exc:
-            logging.debug('sHead already mapped: %s', exc)
-
+            self._load_head_table()
 
     def _load_head_table(self):
+        print 'loading HEAD'
         engine = self.session.connection()
-        return Table('head', metadata,
+        head_table = Table('head', metadata,
                 PrimaryKeyConstraint('revision_bag_name', 'revision_tiddler_title'),
                 autoload_with=engine,
                 useexisting=True,
                 autoload=True)
+        try:
+            mapper(sHead, head_table)
+        except ArgumentError:
+            print 'remap HEAD'
 
     def search(self, search_query=''):
-        query = self.session.query(sRevision)
-        query = query.filter(sHead.revision_bag_name == sRevision.bag_name)
-        query = query.filter(sHead.revision_tiddler_title == sRevision.tiddler_title)
-        query = query.filter(sHead.head_rev == sRevision.number)
-
         try:
-            ast = self.parser(search_query)[0]
-            query = self.producer.produce(ast, query)
-        except ParseException, exc:
-            raise StoreError('failed to parse search query: %s' % exc)
+            query = self.session.query(sRevision)
+            query = query.filter(sHead.revision_bag_name == sRevision.bag_name)
+            query = query.filter(sHead.revision_tiddler_title == sRevision.tiddler_title)
+            query = query.filter(sHead.head_rev == sRevision.number)
 
-        return (Tiddler(unicode(stiddler.tiddler_title),
-            unicode(stiddler.bag_name)) for stiddler in query.all())
+            try:
+                ast = self.parser(search_query)[0]
+                query = self.producer.produce(ast, query)
+            except ParseException, exc:
+                raise StoreError('failed to parse search query: %s' % exc)
+
+            return (Tiddler(unicode(stiddler.tiddler_title),
+                unicode(stiddler.bag_name)) for stiddler in query.all())
+        except:
+            self.session.rollback()
+            raise
 
 
 def index_query(environ, **kwargs):
