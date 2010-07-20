@@ -14,13 +14,19 @@ from sqlalchemy.schema import Table, PrimaryKeyConstraint
 from sqlalchemy.orm import mapper
 
 from tiddlyweb.model.tiddler import Tiddler
+from tiddlyweb.store import StoreError
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
         sTiddler, sRevision, metadata, field_table)
 
 from tiddlyweb.filters import FilterIndexRefused
 
-from whoosh.qparser.default import QueryParser
+from pyparsing import (printables, alphanums, OneOrMore, Group,
+        Combine, Suppress, Optional, FollowedBy, Literal, CharsNotIn,
+        Word, Keyword, Empty, White, Forward, QuotedString, StringEnd,
+        ParseException)
+
+
 
 import logging
 logging.basicConfig()
@@ -78,8 +84,11 @@ CREATE VIEW head
         query = query.filter(sHead.revision_tiddler_title == sRevision.tiddler_title)
         query = query.filter(sHead.head_rev == sRevision.number)
 
-        ast = self.parser(search_query)[0]
-        query = self.producer.produce(ast, query)
+        try:
+            ast = self.parser(search_query)[0]
+            query = self.producer.produce(ast, query)
+        except ParseException, exc:
+            raise StoreError('failed to parse search query: %s' % exc)
 
         return (Tiddler(unicode(stiddler.tiddler_title),
             unicode(stiddler.bag_name)) for stiddler in query.all())
@@ -95,14 +104,12 @@ def index_query(environ, **kwargs):
     
     storage = store.storage
 
-    tiddlers = storage.search(search_query=query)
+    try:
+        tiddlers = storage.search(search_query=query)
+    except StoreError, exc:
+        raise FilterIndexRefused('error in the store: %s' % exc)
 
     return (store.get(tiddler) for tiddler in tiddlers)
-
-
-from pyparsing import (printables, alphanums, OneOrMore, Group,
-        Combine, Suppress, Optional, FollowedBy, Literal, CharsNotIn,
-        Word, Keyword, Empty, White, Forward, QuotedString, StringEnd)
 
 
 # XXX borrowed from Whoosh
@@ -155,7 +162,7 @@ def _make_default_parser():
 # should be searched in a particular field by prepending 'fn:', where fn is
 # the name of the field.
     fieldableUnit = parenthetical | boostedUnit | boostableUnit
-    fieldedUnit = Group(Word(alphanums + "_") + Suppress(':') + fieldableUnit).setResultsName("Field")
+    fieldedUnit = Group(Word(alphanums + "_" + "-") + Suppress(':') + fieldableUnit).setResultsName("Field")
 
 # Units of content
     unit = fieldedUnit | fieldableUnit
@@ -250,4 +257,5 @@ class Producer(object):
         return and_(*expressions)
 
     def _Quotes(self, node, fieldname):
+        node[0] = '"%s"' % node[0]
         return self._Word(node, fieldname)
