@@ -175,13 +175,9 @@ def test_search_arbitrarily_complex():
     QUERY = 'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public) house:treehouse'
 
     tiddlers = list(store.search(QUERY))
-    for tiddler in tiddlers:
-        print tiddler.bag, tiddler.title
     assert len(tiddlers) == 1
 
     QUERY = 'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public) house:treehouse car:porsche'
 
     tiddlers = list(store.search(QUERY))
-    for tiddler in tiddlers:
-        print tiddler.bag, tiddler.title
     assert len(tiddlers) == 1
