@@ -40,32 +40,31 @@ class sHead(object):
 
 ENGINE = None
 SESSION = None
+MAPPED = False
+#head_table = None
 
 class Store(SQLStore):
-
-    HEAD = None
-    mapped = False
 
     def _init_store(self):
         """
         Establish the database engine and session,
         creating tables if needed.
         """
-        global ENGINE, SESSION
+        global ENGINE, SESSION, MAPPED
         if not ENGINE:
             ENGINE = create_engine(self._db_config(), pool_recycle=3600)
         metadata.bind = ENGINE
         Session.configure(bind=ENGINE)
         if not SESSION:
-            SESSION = Session()
+            SESSION = Session(autocommit=True)
         self.session = SESSION
         self.serializer = Serializer('text')
         self.parser = DEFAULT_PARSER
         self.producer = Producer()
 
-        if not Store.mapped:
+        if not MAPPED:
             metadata.create_all(ENGINE)
-            Store.mapped = True
+            MAPPED = True
 
         try:
             self._load_head_table()
@@ -81,11 +80,10 @@ CREATE VIEW head
             self._load_head_table()
 
     def _load_head_table(self):
-        print 'loading HEAD'
-        engine = self.session.connection()
         head_table = Table('head', metadata,
-                PrimaryKeyConstraint('revision_bag_name', 'revision_tiddler_title'),
-                autoload_with=engine,
+                PrimaryKeyConstraint('revision_bag_name',
+                    'revision_tiddler_title'),
+                autoload_with=ENGINE,
                 useexisting=True,
                 autoload=True)
         try:
