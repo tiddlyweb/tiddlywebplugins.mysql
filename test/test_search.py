@@ -137,3 +137,24 @@ def test_search_right_revision():
     tiddlers = list(index_query(environ, **kwords))
 
     assert len(tiddlers) == 0
+
+def test_search_follow_syntax():
+    QUERY = 'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public)'
+
+    store.put(Bag('fnd_public'))
+    store.put(Bag('cdent_public'))
+    tiddler = Tiddler('GettingStarted', 'fnd_public')
+    tiddler.text = 'fnd starts'
+    store.put(tiddler)
+    tiddler = Tiddler('GettingStarted', 'cdent_public')
+    tiddler.text = 'cdent starts'
+    store.put(tiddler)
+    tiddler = Tiddler('other', 'cdent_public')
+    tiddler.text = 'cdent starts'
+    store.put(tiddler)
+
+    tiddlers = list(store.search('starts'))
+    assert len(tiddlers) == 3
+
+    tiddlers = list(store.search(QUERY))
+    assert len(tiddlers) == 2
