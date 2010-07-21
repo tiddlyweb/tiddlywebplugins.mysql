@@ -29,7 +29,7 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
         Word, Keyword, Empty, White, Forward, QuotedString, StringEnd,
         ParseException)
 
-#import logging
+import logging
 #logging.basicConfig()
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 # logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
@@ -71,9 +71,10 @@ class Store(SQLStore):
 
 
         try:
-            self._load_head_table()
+            if not hasattr(sHead, 'head_rev'):
+                self._load_head_table()
         except NoSuchTableError:
-            print 'creating view HEAD'
+            logging.debug('creating view HEAD')
             self.session.execute("""
 CREATE VIEW head
   AS SELECT revision.bag_name AS revision_bag_name,
@@ -92,7 +93,7 @@ CREATE VIEW head
         try:
             mapper(sHead, head_table)
         except ArgumentError:
-            print 'remap HEAD'
+            logging.debug('remapped HEAD')
 
 
     def search(self, search_query=''):
