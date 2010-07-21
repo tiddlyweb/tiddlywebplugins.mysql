@@ -40,6 +40,12 @@ MAPPED = False
 TABLES = [field_table, revision_table, bag_table, policy_table, recipe_table,
         principal_table, role_table, user_table]
 
+class sHead(object):
+    def __repr__(self):
+        return '<sHead(%s:%s:%s)>' % (self.revision_bag_name,
+                self.revision_tiddler_title, self.head_rev)
+
+
 class Store(SQLStore):
 
     def _init_store(self):
@@ -63,23 +69,44 @@ class Store(SQLStore):
             metadata.create_all(ENGINE)
             MAPPED = True
 
+
+        try:
+            self._load_head_table()
+        except NoSuchTableError:
+            print 'creating view HEAD'
+            self.session.execute("""
+CREATE VIEW head
+  AS SELECT revision.bag_name AS revision_bag_name,
+    revision.tiddler_title AS revision_tiddler_title,
+    max(revision.number) AS head_rev
+  FROM revision GROUP BY revision.bag_name, revision.tiddler_title;
+""")
+            self._load_head_table()
+
+    def _load_head_table(self):
+        head_table = Table('head', metadata,
+                PrimaryKeyConstraint('head_rev'),
+                autoload_with=ENGINE,
+                useexisting=True,
+                autoload=True)
+        try:
+            mapper(sHead, head_table)
+        except ArgumentError:
+            print 'remap HEAD'
+
+
     def search(self, search_query=''):
         try:
-            subquery = (self.session.query(func.max(sRevision.number))
-                    .group_by(sRevision.bag_name, sRevision.tiddler_title)
-                    .subquery())
             
             query = (self.session.query(sRevision.bag_name,
-                    sRevision.tiddler_title, sRevision.number)
-                    .group_by(sRevision.bag_name, sRevision.tiddler_title))
+                    sRevision.tiddler_title))
+            query = query.filter(sHead.head_rev==sRevision.number)
 
             try:
                 ast = self.parser(search_query)[0]
                 query = self.producer.produce(ast, query)
             except ParseException, exc:
                 raise StoreError('failed to parse search query: %s' % exc)
-
-            query = query.filter(sRevision.number.in_(subquery))
 
             return (Tiddler(unicode(stiddler.tiddler_title),
                 unicode(stiddler.bag_name)) for stiddler in query.all())
