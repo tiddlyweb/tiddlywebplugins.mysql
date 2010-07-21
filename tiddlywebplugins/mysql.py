@@ -12,10 +12,11 @@ from sqlalchemy.sql.expression import and_, or_, text as text_, alias
 from sqlalchemy.sql import func
 from sqlalchemy.schema import Table, PrimaryKeyConstraint
 from sqlalchemy.orm import mapper
+from sqlalchemy.orm.exc import NoResultFound
 
 from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.serializer import Serializer
-from tiddlyweb.store import StoreError
+from tiddlyweb.store import StoreError, NoTiddlerError
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
         sRevision, metadata, Session,
@@ -111,6 +112,32 @@ CREATE VIEW head
 
             return (Tiddler(unicode(stiddler.tiddler_title),
                 unicode(stiddler.bag_name)) for stiddler in query.all())
+        except:
+            self.session.rollback()
+            raise
+
+    def tiddler_get(self, tiddler):
+        """
+        Override sqlalchemy store's tiddler_get to take advantage of
+        the head view.
+        """
+        try:
+            try:
+                query = (self.session.query(sRevision).
+                        filter(sRevision.tiddler_title == tiddler.title).
+                        filter(sRevision.bag_name == tiddler.bag))
+                base_tiddler = query.order_by(sRevision.number.asc()).limit(1)
+                if tiddler.revision:
+                    query = query.filter(sRevision.number == tiddler.revision)
+                else:
+                    query = query.filter(sHead.head_rev==sRevision.number)
+                stiddler = query.one()
+                base_tiddler = base_tiddler.one()
+                tiddler = self._load_tiddler(tiddler, stiddler, base_tiddler)
+                return tiddler
+            except NoResultFound, exc:
+                raise NoTiddlerError('Tiddler %s not found: %s' %
+                        (tiddler.title, exc))
         except:
             self.session.rollback()
             raise
