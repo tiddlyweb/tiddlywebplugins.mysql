@@ -18,7 +18,9 @@ from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
-        sTiddler, sRevision, metadata, Session, field_table)
+        sRevision, metadata, Session,
+        field_table, revision_table, bag_table, policy_table,
+        recipe_table, principal_table, role_table, user_table)
 
 from tiddlyweb.filters import FilterIndexRefused
 
@@ -33,15 +35,15 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 # logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 
 
-class sHead(object):
-    def __repr__(self):
-        return '<sHead(%s:%s:%s)>' % (self.revision_bag_name, self.revision_tiddler_title,
-                self.head_rev)
+# class sHead(object):
+#     def __repr__(self):
+#         return '<sHead(%s:%s:%s)>' % (self.revision_bag_name, self.revision_tiddler_title,
+#                 self.head_rev)
 
 ENGINE = None
-SESSION = None
 MAPPED = False
-#head_table = None
+TABLES = [field_table, revision_table, bag_table, policy_table, recipe_table,
+        principal_table, role_table, user_table]
 
 class Store(SQLStore):
 
@@ -50,53 +52,29 @@ class Store(SQLStore):
         Establish the database engine and session,
         creating tables if needed.
         """
-        global ENGINE, SESSION, MAPPED
+        global ENGINE, MAPPED
         if not ENGINE:
             ENGINE = create_engine(self._db_config(), pool_recycle=3600)
         metadata.bind = ENGINE
         Session.configure(bind=ENGINE)
-        if not SESSION:
-            SESSION = Session(autocommit=True)
-        self.session = SESSION
+        self.session = Session()
         self.serializer = Serializer('text')
         self.parser = DEFAULT_PARSER
         self.producer = Producer()
 
         if not MAPPED:
+            for table in TABLES:
+                table.kwargs['mysql_engine'] = 'InnoDB'
+                table.kwargs['mysql_charset'] = 'utf8'
             metadata.create_all(ENGINE)
             MAPPED = True
 
-        try:
-            self._load_head_table()
-        except NoSuchTableError:
-            print 'creating view HEAD'
-            self.session.execute("""
-CREATE VIEW head
-  AS SELECT revision.bag_name AS revision_bag_name,
-    revision.tiddler_title AS revision_tiddler_title,
-    max(revision.number) AS head_rev
-  FROM revision GROUP BY revision.bag_name, revision.tiddler_title;
-""")
-            self._load_head_table()
-
-    def _load_head_table(self):
-        head_table = Table('head', metadata,
-                PrimaryKeyConstraint('revision_bag_name',
-                    'revision_tiddler_title'),
-                autoload_with=ENGINE,
-                useexisting=True,
-                autoload=True)
-        try:
-            mapper(sHead, head_table)
-        except ArgumentError:
-            print 'remap HEAD'
-
     def search(self, search_query=''):
         try:
-            query = self.session.query(sRevision)
-            query = query.filter(sHead.revision_bag_name == sRevision.bag_name)
-            query = query.filter(sHead.revision_tiddler_title == sRevision.tiddler_title)
-            query = query.filter(sHead.head_rev == sRevision.number)
+            query = self.session.query(sRevision,func.max(sRevision.number))
+            #query = query.filter(sHead.revision_bag_name == sRevision.bag_name)
+            #query = query.filter(sHead.revision_tiddler_title == sRevision.tiddler_title)
+            query = query.group_by(sRevision.tiddler_title)
 
             try:
                 ast = self.parser(search_query)[0]
@@ -104,8 +82,8 @@ CREATE VIEW head
             except ParseException, exc:
                 raise StoreError('failed to parse search query: %s' % exc)
 
-            return (Tiddler(unicode(stiddler.tiddler_title),
-                unicode(stiddler.bag_name)) for stiddler in query.all())
+            return (Tiddler(unicode(stiddler[0].tiddler_title),
+                unicode(stiddler[0].bag_name)) for stiddler in query.all())
         except:
             self.session.rollback()
             raise
@@ -132,11 +110,6 @@ def index_query(environ, **kwargs):
 # XXX borrowed from Whoosh
 def _make_default_parser():
     escapechar = "\\"
-
-#wordchars = printables
-#for specialchar in '*?^():"{}[] ' + escapechar:
-#    wordchars = wordchars.replace(specialchar, "")
-#wordtext = Word(wordchars)
 
     wordtext = CharsNotIn('\\*?^():"{}[] ')
     escape = Suppress(escapechar) + (Word(printables, exact=1) | White(exact=1))
@@ -223,27 +196,25 @@ class Producer(object):
     def _Word(self, node, fieldname):
         if fieldname:
             if fieldname == 'ftitle' or fieldname == 'title':
-                fieldname = 'revision_tiddler_title'
+                fieldname = 'tiddler_title'
             if fieldname == 'fbag' or fieldname == 'bag':
-                fieldname = 'revision_bag_name'
+                fieldname = 'bag_name'
 
             if fieldname == 'id':
                 bag, title = node[0].split(':', 1)
-                expression = and_(sHead.revision_bag_name == bag,
-                        sHead.revision_tiddler_title == title)
+                expression = and_(sRevision.bag_name == bag,
+                        sRevision.tiddler_title == title)
             elif fieldname == 'tag':
                 # XXX: this is insufficiently specific
                 expression = sRevision.tags.op('regexp')('(^| {1})%s( {1}|$)'
                         % node[0])
-            elif hasattr(sHead, fieldname):
-                expression = (getattr(sHead, fieldname) == node[0])
             elif hasattr(sRevision, fieldname):
                 expression = (getattr(sRevision, fieldname) == node[0])
             else:
                 sfield_alias = alias(field_table)
-                expression = and_(sfield_alias.c.tiddler_title == sHead.revision_tiddler_title,
-                        sfield_alias.c.bag_name == sHead.revision_bag_name,
-                        sfield_alias.c.revision_number == sHead.head_rev,
+                expression = and_(sfield_alias.c.tiddler_title == sRevision.tiddler_title,
+                        sfield_alias.c.bag_name == sRevision.bag_name,
+                        sfield_alias.c.revision_number == sRevision.number,
                         sfield_alias.c.name == fieldname,
                         sfield_alias.c.value == node[0])
         else:
