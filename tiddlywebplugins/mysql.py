@@ -29,16 +29,11 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
         Word, Keyword, Empty, White, Forward, QuotedString, StringEnd,
         ParseException)
 
-# import logging
-# logging.basicConfig()
-# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+#import logging
+#logging.basicConfig()
+#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 # logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 
-
-# class sHead(object):
-#     def __repr__(self):
-#         return '<sHead(%s:%s:%s)>' % (self.revision_bag_name, self.revision_tiddler_title,
-#                 self.head_rev)
 
 ENGINE = None
 MAPPED = False
@@ -64,17 +59,19 @@ class Store(SQLStore):
 
         if not MAPPED:
             for table in TABLES:
-                table.kwargs['mysql_engine'] = 'InnoDB'
                 table.kwargs['mysql_charset'] = 'utf8'
             metadata.create_all(ENGINE)
             MAPPED = True
 
     def search(self, search_query=''):
         try:
-            query = self.session.query(sRevision,func.max(sRevision.number))
-            #query = query.filter(sHead.revision_bag_name == sRevision.bag_name)
-            #query = query.filter(sHead.revision_tiddler_title == sRevision.tiddler_title)
-            query = query.group_by(sRevision.tiddler_title)
+            subquery = (self.session.query(func.max(sRevision.number))
+                    .group_by(sRevision.bag_name, sRevision.tiddler_title)
+                    .subquery())
+            
+            query = (self.session.query(sRevision.bag_name,
+                    sRevision.tiddler_title, sRevision.number)
+                    .group_by(sRevision.bag_name, sRevision.tiddler_title))
 
             try:
                 ast = self.parser(search_query)[0]
@@ -82,8 +79,10 @@ class Store(SQLStore):
             except ParseException, exc:
                 raise StoreError('failed to parse search query: %s' % exc)
 
-            return (Tiddler(unicode(stiddler[0].tiddler_title),
-                unicode(stiddler[0].bag_name)) for stiddler in query.all())
+            query = query.filter(sRevision.number.in_(subquery))
+
+            return (Tiddler(unicode(stiddler.tiddler_title),
+                unicode(stiddler.bag_name)) for stiddler in query.all())
         except:
             self.session.rollback()
             raise
@@ -212,8 +211,7 @@ class Producer(object):
                 expression = (getattr(sRevision, fieldname) == node[0])
             else:
                 sfield_alias = alias(field_table)
-                expression = and_(sfield_alias.c.tiddler_title == sRevision.tiddler_title,
-                        sfield_alias.c.bag_name == sRevision.bag_name,
+                expression = and_(
                         sfield_alias.c.revision_number == sRevision.number,
                         sfield_alias.c.name == fieldname,
                         sfield_alias.c.value == node[0])
