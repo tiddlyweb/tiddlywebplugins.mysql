@@ -1,9 +1,8 @@
-# YOU NEED TO EDIT THESE
-AUTHOR = 'Python Person'
-AUTHOR_EMAIL = 'python@example.org'
-NAME = 'tiddlywebplugins.example'
-DESCRIPTION = 'The short description of my project'
-VERSION = '0.9'
+AUTHOR = 'Chris Dent'
+AUTHOR_EMAIL = 'cdent@peermore.com'
+NAME = 'tiddlywebplugins.mysql'
+DESCRIPTION = 'MySQL-based store for tiddlyweb'
+VERSION = '0.1'
 
 
 import os
@@ -11,7 +10,6 @@ import os
 from setuptools import setup, find_packages
 
 
-# You should carefully review the below (install_requires especially).
 setup(
     namespace_packages = ['tiddlywebplugins'],
     name = NAME,
@@ -23,6 +21,10 @@ setup(
     url = 'http://pypi.python.org/pypi/%s' % NAME,
     platforms = 'Posix; MacOS X; Windows',
     packages = find_packages(exclude=['test']),
-    install_requires = ['setuptools', 'tiddlyweb'],
+    install_requires = ['setuptools',
+        'tiddlyweb'
+        'tiddlywebplugins.sqlalchemy',
+        'MySQL-python'
+        ],
     zip_safe = False
     )

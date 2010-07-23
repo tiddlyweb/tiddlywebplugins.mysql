@@ -2,7 +2,7 @@ A plugin for TiddlyWeb subclassing tiddlywebplugins.sqlalchemy with mysql specif
 
 The main additions here are two:
 
-* Provide a reasonable search interface using mysql's freetext.
+* Provide a reasonable search interface using mysql's fulltext.
 * Provide an index_query method to allow the plugin to be used as
   an 'indexer' for filters and determine_bag_for_tiddler.
 
@@ -24,9 +24,12 @@ will likely fail.
 ft_min_word_len = 3
 ft_stopword_file = ''
 
-The fulltext index must (for now at least) be created by hand:
+You will need to create a database. I use one called 'tiddlyweb', and
+add the following to tiddlywebconfig.py:
 
-    create fulltext index free on revision (tiddler_title, text, tags);
+    'server_store': ['tiddlywebplugins.mysql', {
+        'db_config': 'mysql:///tiddlyweb?charset=utf8&use_unicode=0'}],
+    'indexer': 'tiddlywebplugins.mysql',
 
 Thanks to Adrian Hosey <http://adrianhosey.blogspot.com/> for help over
 some SQL humps.

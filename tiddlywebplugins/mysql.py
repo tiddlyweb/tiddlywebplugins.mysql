@@ -1,6 +1,12 @@
 """
 A subclass of tiddlywebplugins.sqlalchemy with mysql specific
-tune ups.
+tune ups, including a fulltext index and 'indexer' support
+for accelerating filters.
+
+http://github.com/cdent/tiddlywebplugins.mysql
+http://tiddlyweb.com/
+
+ALPHA!
 """
 from __future__ import absolute_import
 
