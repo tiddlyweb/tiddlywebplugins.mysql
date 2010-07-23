@@ -8,7 +8,7 @@ from tiddlywebplugins.utils import get_store
 
 from tiddlywebplugins.mysql import index_query
 from tiddlywebplugins.sqlalchemy import (sField, sRevision,
-        sBag, sRecipe, sUser, sPolicy, sPrincipal, sRole)
+        sBag, sRecipe, sUser, sPolicy, sRole)
 
 def setup_module(module):
     module.store = get_store(config)
@@ -17,7 +17,7 @@ def setup_module(module):
     session = module.store.storage.session
 # delete everything
     for table in (sField, sRevision, sBag, sRecipe, sUser,
-            sPolicy, sPrincipal, sRole):
+            sPolicy, sRole):
         session.query(table).delete()
 
 def test_simple_store():

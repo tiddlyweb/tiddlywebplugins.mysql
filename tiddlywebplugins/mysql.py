@@ -27,7 +27,7 @@ from tiddlyweb.store import StoreError, NoTiddlerError
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
         sRevision, metadata, Session,
         field_table, revision_table, bag_table, policy_table,
-        recipe_table, principal_table, role_table, user_table)
+        recipe_table, role_table, user_table)
 
 from tiddlyweb.filters import FilterIndexRefused
 
@@ -45,7 +45,7 @@ import logging
 ENGINE = None
 MAPPED = False
 TABLES = [field_table, revision_table, bag_table, policy_table, recipe_table,
-        principal_table, role_table, user_table]
+        role_table, user_table]
 
 class sHead(object):
     def __repr__(self):
@@ -255,32 +255,46 @@ class Producer(object):
         return and_(*expressions)
 
     def _Word(self, node, fieldname):
+        value = node[0]
         if fieldname:
+            like = False
+            if value.endswith('*'):
+                value = value.replace('*', '%')
+                like = True
+
             if fieldname == 'ftitle' or fieldname == 'title':
                 fieldname = 'tiddler_title'
             if fieldname == 'fbag' or fieldname == 'bag':
                 fieldname = 'bag_name'
 
             if fieldname == 'id':
-                bag, title = node[0].split(':', 1)
+                bag, title = value.split(':', 1)
                 expression = and_(sRevision.bag_name == bag,
                         sRevision.tiddler_title == title)
             elif fieldname == 'tag':
                 # XXX: this is insufficiently specific
                 expression = sRevision.tags.op('regexp')('(^| {1})%s( {1}|$)'
-                        % node[0])
+                        % value)
             elif hasattr(sRevision, fieldname):
-                expression = (getattr(sRevision, fieldname) == node[0])
+                if like:
+                    expression = (getattr(sRevision, fieldname).like(value))
+                else:
+                    expression = (getattr(sRevision, fieldname) == value)
             else:
                 sfield_alias = alias(field_table)
                 expression = and_(
                         sfield_alias.c.revision_number == sRevision.number,
-                        sfield_alias.c.name == fieldname,
-                        sfield_alias.c.value == node[0])
+                        sfield_alias.c.name == fieldname)
+                if like:
+                    expression = and_(expression,
+                            sfield_alias.c.value.like(value))
+                else:
+                    expression = and_(expression,
+                            sfield_alias.c.value == value)
         else:
             expression = (text_('MATCH(revision.tiddler_title, text, tags) '
                 + 'AGAINST(:query in boolean mode)')
-                .params(query=node[0]))
+                .params(query=value))
         return expression 
 
     def _Field(self, node, fieldname):
