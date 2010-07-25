@@ -93,6 +93,8 @@ CREATE fulltext INDEX free on REVISION (tiddler_title, text, tags);
             self._load_head_table()
 
     def _load_head_table(self):
+        # XXX: There are still some times when this fails to load
+        # with a key error. Do not know why, and it is rare.
         head_table = Table('head', metadata,
                 PrimaryKeyConstraint('head_rev'),
                 autoload_with=ENGINE,
@@ -172,7 +174,7 @@ def index_query(environ, **kwargs):
 def _make_default_parser():
     escapechar = "\\"
 
-    wordtext = CharsNotIn('\\*?^():"{}[] ')
+    wordtext = CharsNotIn('\\():"{}[] ')
     escape = Suppress(escapechar) + (Word(printables, exact=1) | White(exact=1))
     wordtoken = Combine(OneOrMore(wordtext | escape))
 # A plain old word.
