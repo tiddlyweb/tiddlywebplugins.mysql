@@ -12,12 +12,13 @@ from __future__ import absolute_import
 
 import logging
 
+from sqlalchemy import select
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ArgumentError, NoSuchTableError
 from sqlalchemy.sql.expression import and_, or_, text as text_, alias
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, bindparam
 from sqlalchemy.schema import Table, PrimaryKeyConstraint
-from sqlalchemy.orm import mapper
+from sqlalchemy.orm import mapper, aliased, contains_alias
 from sqlalchemy.orm.exc import NoResultFound
 
 from tiddlyweb.model.tiddler import Tiddler
@@ -36,7 +37,7 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
         Word, Keyword, Empty, White, Forward, QuotedString, StringEnd,
         ParseException)
 
-import logging
+#import logging
 #logging.basicConfig()
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 # logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
@@ -46,12 +47,6 @@ ENGINE = None
 MAPPED = False
 TABLES = [field_table, revision_table, bag_table, policy_table, recipe_table,
         role_table, user_table]
-
-class sHead(object):
-    def __repr__(self):
-        return '<sHead(%s:%s:%s)>' % (self.revision_bag_name,
-                self.revision_tiddler_title, self.head_rev)
-
 
 class Store(SQLStore):
 
@@ -77,42 +72,15 @@ class Store(SQLStore):
             MAPPED = True
 
 
-        try:
-            if not hasattr(sHead, 'head_rev'):
-                self._load_head_table()
-        except NoSuchTableError:
-            logging.debug('creating view HEAD')
-            self.session.execute("""
-CREATE VIEW head
-  AS SELECT revision.bag_name AS revision_bag_name,
-    revision.tiddler_title AS revision_tiddler_title,
-    max(revision.number) AS head_rev
-  FROM revision GROUP BY revision.bag_name, revision.tiddler_title;
-CREATE fulltext INDEX free on revision (tiddler_title, text, tags);
-""")
-            self._load_head_table()
-
-    def _load_head_table(self):
-        # XXX: There are still some times when this fails to load
-        # with a key error. Do not know why, and it is rare.
-        head_table = Table('head', metadata,
-                PrimaryKeyConstraint('head_rev'),
-                autoload_with=ENGINE,
-                useexisting=True,
-                autoload=True)
-        try:
-            mapper(sHead, head_table)
-        except ArgumentError:
-            logging.debug('remapped HEAD')
-
-
     def search(self, search_query=''):
+        rev_alias = alias(revision_table)
+        statement = func.max(rev_alias.c.number)
+        statement = statement.select().where(and_(
+            sRevision.tiddler_title==rev_alias.c.tiddler_title,
+            sRevision.bag_name==rev_alias.c.bag_name))
+        query = self.session.query(sRevision.bag_name, sRevision.tiddler_title)
+        query = query.filter(sRevision.number==statement)
         try:
-            
-            query = (self.session.query(sRevision.bag_name,
-                    sRevision.tiddler_title))
-            query = query.filter(sHead.head_rev==sRevision.number)
-
             try:
                 ast = self.parser(search_query)[0]
                 query = self.producer.produce(ast, query)
@@ -129,17 +97,31 @@ CREATE fulltext INDEX free on revision (tiddler_title, text, tags);
         """
         Override sqlalchemy store's tiddler_get to take advantage of
         the head view.
+        XXX: head view is gone, refactor this back to twp.sqlalchemy
         """
+        max_rev_alias = alias(revision_table)
+        max_statement = func.max(max_rev_alias.c.number)
+        max_statement = max_statement.select().where(and_(
+            max_rev_alias.c.tiddler_title==tiddler.title,
+            max_rev_alias.c.bag_name==tiddler.bag))
+
+        min_rev_alias = alias(revision_table)
+        min_statement = func.min(min_rev_alias.c.number)
+        min_statement = min_statement.select().where(and_(
+            min_rev_alias.c.tiddler_title==tiddler.title,
+            min_rev_alias.c.bag_name==tiddler.bag))
         try:
             try:
                 query = (self.session.query(sRevision).
                         filter(sRevision.tiddler_title == tiddler.title).
                         filter(sRevision.bag_name == tiddler.bag))
-                base_tiddler = query.order_by(sRevision.number.asc()).limit(1)
+                base_tiddler = query.filter(
+                        sRevision.number==min_statement)
                 if tiddler.revision:
                     query = query.filter(sRevision.number == tiddler.revision)
                 else:
-                    query = query.filter(sHead.head_rev==sRevision.number)
+                    query = query.filter(
+                            sRevision.number==max_statement)
                 stiddler = query.one()
                 base_tiddler = base_tiddler.one()
                 tiddler = self._load_tiddler(tiddler, stiddler, base_tiddler)
@@ -294,7 +276,8 @@ class Producer(object):
                     expression = and_(expression,
                             sfield_alias.c.value == value)
         else:
-            expression = (text_('MATCH(revision.tiddler_title, text, tags) '
+            expression = (text_(
+                'MATCH(revision.tiddler_title, revision.text, revision.tags) '
                 + 'AGAINST(:query in boolean mode)')
                 .params(query=value))
         return expression 
