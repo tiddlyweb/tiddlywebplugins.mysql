@@ -57,7 +57,11 @@ class Store(SQLStore):
         """
         global ENGINE, MAPPED
         if not ENGINE:
-            ENGINE = create_engine(self._db_config(), pool_recycle=3600)
+            ENGINE = create_engine(self._db_config(),
+                    pool_recycle=3600,
+                    pool_size=20,
+                    max_overflow=10,
+                    pool_timeout=20)
         metadata.bind = ENGINE
         Session.configure(bind=ENGINE)
         self.session = Session()
