@@ -88,7 +88,7 @@ CREATE VIEW head
     revision.tiddler_title AS revision_tiddler_title,
     max(revision.number) AS head_rev
   FROM revision GROUP BY revision.bag_name, revision.tiddler_title;
-CREATE fulltext INDEX free on REVISION (tiddler_title, text, tags);
+CREATE fulltext INDEX free on revision (tiddler_title, text, tags);
 """)
             self._load_head_table()
 
