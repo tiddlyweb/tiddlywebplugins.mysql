@@ -24,9 +24,9 @@ def test_simple_store():
     bag = Bag('bag1')
     store.put(bag)
     tiddler = Tiddler('tiddler1', 'bag1')
-    tiddler.text = 'oh hello i chrisdent have nothing to say here you know'
-    tiddler.tags = ['apple', 'orange', 'pear']
-    tiddler.fields['house'] = 'cottage'
+    tiddler.text = u'oh hello i chrisdent have nothing to say here you know'
+    tiddler.tags = [u'apple', u'orange', u'pear']
+    tiddler.fields[u'house'] = u'cottage'
     store.put(tiddler)
 
     retrieved = Tiddler('tiddler1', 'bag1')
@@ -46,7 +46,7 @@ def test_simple_search():
     assert tiddlers[0].bag == 'bag1'
 
 def test_index_query_id():
-    kwords = {'id': 'bag1:tiddler1'}
+    kwords = {'id': u'bag1:tiddler1'}
     tiddlers = list(index_query(environ, **kwords))
 
     assert len(tiddlers) == 1
@@ -54,7 +54,7 @@ def test_index_query_id():
     assert tiddlers[0].bag == 'bag1'
 
 def test_index_query_filter():
-    kwords = {'tag': 'orange'}
+    kwords = {'tag': u'orange'}
     tiddlers = list(index_query(environ, **kwords))
 
     assert len(tiddlers) == 1
@@ -62,7 +62,7 @@ def test_index_query_filter():
     assert tiddlers[0].bag == 'bag1'
 
 def test_index_query_filter_fields():
-    kwords = {'house': 'cottage'}
+    kwords = {'house': u'cottage'}
     tiddlers = list(index_query(environ, **kwords))
 
     assert len(tiddlers) == 1
@@ -70,13 +70,13 @@ def test_index_query_filter_fields():
     assert tiddlers[0].bag == 'bag1'
     assert tiddlers[0].fields['house'] == 'cottage'
 
-    kwords = {'house': 'mansion'}
+    kwords = {u'house': u'mansion'}
     tiddlers = list(index_query(environ, **kwords))
 
     assert len(tiddlers) == 0
 
 def test_index_query_filter_fields():
-    kwords = {'bag': 'bag1', 'house': 'cottage'}
+    kwords = {'bag': u'bag1', 'house': u'cottage'}
     tiddlers = list(index_query(environ, **kwords))
 
     assert len(tiddlers) == 1
@@ -86,24 +86,24 @@ def test_index_query_filter_fields():
 
 def test_search_right_revision():
     tiddler = Tiddler('revised', 'bag1')
-    tiddler.text = 'alpha'
-    tiddler.fields['house'] = 'cottage'
+    tiddler.text = u'alpha'
+    tiddler.fields[u'house'] = u'cottage'
     store.put(tiddler)
     tiddler = Tiddler('revised', 'bag1')
-    tiddler.text = 'beta'
-    tiddler.fields['house'] = 'mansion'
+    tiddler.text = u'beta'
+    tiddler.fields[u'house'] = u'mansion'
     store.put(tiddler)
     tiddler = Tiddler('revised', 'bag1')
-    tiddler.text = 'gamma'
-    tiddler.fields['house'] = 'barn'
+    tiddler.text = u'gamma'
+    tiddler.fields[u'house'] = u'barn'
     store.put(tiddler)
     tiddler = Tiddler('revised', 'bag1')
-    tiddler.text = 'delta'
-    tiddler.fields['house'] = 'bungalow'
+    tiddler.text = u'delta'
+    tiddler.fields[u'house'] = u'bungalow'
     store.put(tiddler)
     tiddler = Tiddler('revised', 'bag1')
-    tiddler.text = 'epsilon'
-    tiddler.fields['house'] = 'treehouse'
+    tiddler.text = u'epsilon'
+    tiddler.fields[u'house'] = u'treehouse'
     store.put(tiddler)
 
     tiddlers = list(store.search('beta'))
@@ -116,68 +116,68 @@ def test_search_right_revision():
     assert tiddler.bag == 'bag1'
     assert tiddler.fields['house'] == 'treehouse'
 
-    kwords = {'bag': 'bag1', 'house': 'barn'}
+    kwords = {'bag': u'bag1', 'house': u'barn'}
     tiddlers = list(index_query(environ, **kwords))
 
     assert len(tiddlers) == 0
 
-    kwords = {'bag': 'bag1', 'house': 'treehouse'}
+    kwords = {'bag': u'bag1', 'house': u'treehouse'}
     tiddlers = list(index_query(environ, **kwords))
 
     assert tiddlers[0].title == 'revised'
     assert tiddlers[0].bag == 'bag1'
     assert tiddlers[0].fields['house'] == 'treehouse'
 
-    kwords = {'bag': 'bag1', 'tag': 'orange'}
+    kwords = {'bag': u'bag1', 'tag': u'orange'}
     tiddlers = list(index_query(environ, **kwords))
 
     assert len(tiddlers) == 1
 
-    kwords = {'bag': 'bag1', 'tag': 'rang'}
+    kwords = {'bag': u'bag1', 'tag': u'rang'}
     tiddlers = list(index_query(environ, **kwords))
 
     assert len(tiddlers) == 0
 
 def test_search_follow_syntax():
-    QUERY = 'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public)'
+    QUERY = u'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public)'
 
     store.put(Bag('fnd_public'))
     store.put(Bag('cdent_public'))
     tiddler = Tiddler('GettingStarted', 'fnd_public')
-    tiddler.text = 'fnd starts'
-    tiddler.fields['house'] = 'treehouse'
-    tiddler.fields['car'] = 'porsche'
+    tiddler.text = u'fnd starts'
+    tiddler.fields[u'house'] = u'treehouse'
+    tiddler.fields[u'car'] = u'porsche'
     store.put(tiddler)
     tiddler = Tiddler('GettingStarted', 'cdent_public')
-    tiddler.text = 'cdent starts'
-    tiddler.fields['left-hand'] = 'well dirty'
+    tiddler.text = u'cdent starts'
+    tiddler.fields[u'left-hand'] = u'well dirty'
     store.put(tiddler)
     tiddler = Tiddler('other', 'cdent_public')
-    tiddler.text = 'cdent starts'
+    tiddler.text = u'cdent starts'
     store.put(tiddler)
 
-    tiddlers = list(store.search('starts'))
+    tiddlers = list(store.search(u'starts'))
     assert len(tiddlers) == 3
 
     tiddlers = list(store.search(QUERY))
     assert len(tiddlers) == 2
 
-    tiddlers = list(store.search('"cdent starts"'))
+    tiddlers = list(store.search(u'"cdent starts"'))
     assert len(tiddlers) == 2
 
-    tiddlers = list(store.search('"fnd starts"'))
+    tiddlers = list(store.search(u'"fnd starts"'))
     assert len(tiddlers) == 1
 
-    tiddler = list(store.search('left-hand:"well dirty"'))
+    tiddler = list(store.search(u'left-hand:"well dirty"'))
     assert len(tiddlers) == 1
 
 def test_search_arbitrarily_complex():
-    QUERY = 'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public) house:treehouse'
+    QUERY = u'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public) house:treehouse'
 
     tiddlers = list(store.search(QUERY))
     assert len(tiddlers) == 1
 
-    QUERY = 'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public) house:treehouse car:porsche'
+    QUERY = u'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public) house:treehouse car:porsche'
 
     tiddlers = list(store.search(QUERY))
     assert len(tiddlers) == 1

@@ -21,6 +21,8 @@ from sqlalchemy.schema import Table, PrimaryKeyConstraint
 from sqlalchemy.orm import mapper, aliased, contains_alias
 from sqlalchemy.orm.exc import NoResultFound
 
+from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
+
 from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError, NoTiddlerError
@@ -72,6 +74,18 @@ class Store(SQLStore):
         if not MAPPED:
             for table in TABLES:
                 table.kwargs['mysql_charset'] = 'utf8'
+                if table.name == 'revision':
+                    for column in table.columns:
+                        if column.name == 'tiddler_title':
+                            column.type = VARCHAR(length=128,
+                                    convert_unicode=True, collation='utf8_bin')
+                        if column.name == 'tags':
+                            column.type = VARCHAR(length=1024,
+                                    convert_unicode=True, collation='utf8_bin')
+                        if column.name == 'text':
+                            column.type = LONGTEXT(convert_unicode=True,
+                                    collation='utf8_bin')
+                            
             metadata.create_all(ENGINE)
             MAPPED = True
 
@@ -116,9 +130,9 @@ class Store(SQLStore):
             min_rev_alias.c.bag_name==tiddler.bag))
         try:
             try:
-                query = (self.session.query(sRevision).
-                        filter(sRevision.tiddler_title == tiddler.title).
-                        filter(sRevision.bag_name == tiddler.bag))
+                query = (self.session.query(sRevision)
+                        .filter(sRevision.tiddler_title == tiddler.title)
+                        .filter(sRevision.bag_name == tiddler.bag))
                 base_tiddler = query.filter(
                         sRevision.number==min_statement)
                 if tiddler.revision:
