@@ -177,7 +177,7 @@ def test_search_arbitrarily_complex():
     tiddlers = list(store.search(QUERY))
     assert len(tiddlers) == 1
 
-    QUERY = u'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public) house:treehouse car:porsche'
+    QUERY = u'ftitle:GettingStarted ((bag:cdent_public OR bag:fnd_public) AND (house:treehouse AND car:porsche))'
 
     tiddlers = list(store.search(QUERY))
     assert len(tiddlers) == 1

@@ -228,9 +228,9 @@ def _make_default_parser():
     orToken = Keyword("OR", caseless=False)
     andNotToken = Keyword("ANDNOT", caseless=False)
 
-    operatorAnd = Group(generalUnit + Suppress(White()) + Suppress(andToken) + Suppress(White()) + expression).setResultsName("And")
-    operatorOr = Group(generalUnit + Suppress(White()) + Suppress(orToken) + Suppress(White()) + expression).setResultsName("Or")
-    operatorAndNot = Group(unit + Suppress(White()) + Suppress(andNotToken) + Suppress(White()) + unit).setResultsName("AndNot")
+    operatorAnd = Group(generalUnit + OneOrMore(Suppress(White()) + Suppress(andToken) + Suppress(White()) + generalUnit)).setResultsName("And")
+    operatorOr = Group(generalUnit + OneOrMore(Suppress(White()) + Suppress(orToken) + Suppress(White()) + generalUnit)).setResultsName("Or")
+    operatorAndNot = Group(unit + OneOrMore(Suppress(White()) + Suppress(andNotToken) + Suppress(White()) + unit)).setResultsName("AndNot")
 
     expression << (OneOrMore(operatorAnd | operatorOr | operatorAndNot | generalUnit | Suppress(White())) | Empty())
 
