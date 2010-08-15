@@ -40,6 +40,7 @@ def test_make_a_bunch():
         recipe_list = [(bag_name, '')]
         tiddler_text = u'hey ho %s' % x
         field_name = u'field%s' % x
+        field_name2 = u'fieldone%s' % x
         tag_name = u'tag%s' % x
         user_name = u'user%s' % x
         user_pass = u'pass%s' % x
@@ -60,8 +61,10 @@ def test_make_a_bunch():
         tiddler = Tiddler(tiddler_name, bag_name)
         tiddler.text = tiddler_text
         tiddler.fields[field_name] = field_name
+        tiddler.fields[field_name2] = field_name2
         tiddler.fields['server.host'] = 'gunky'
         tiddler.tags = [tag_name]
+        store.put(tiddler)
         store.put(tiddler)
         user = User(user_name)
         user.set_password(user_pass)
@@ -84,15 +87,17 @@ def test_make_a_bunch():
         assert rname in recipes
         assert uname in users
 
+    tiddler = store.get(Tiddler('tiddler0', 'bag0'))
+    assert tiddler.fields['field0'] == 'field0'
+    assert tiddler.fields['fieldone0'] == 'fieldone0'
+
     bag = Bag('bag0')
     bag = store.get(bag)
-    #try:
     tiddlers = list(store.list_bag_tiddlers(bag))
-    #except AttributeError:
-    #    tiddlers = list(bag.gen_tiddlers())
     assert len(tiddlers) == 1
     assert tiddlers[0].title == 'tiddler0'
     assert tiddlers[0].fields['field0'] == 'field0'
+    assert tiddlers[0].fields['fieldone0'] == 'fieldone0'
     assert tiddlers[0].tags == ['tag0']
     assert sorted(bag.policy.read) == ['andextra', 'hi0']
     assert sorted(bag.policy.manage) == ['R:hi0', u'andmanage']
@@ -174,6 +179,8 @@ def test_tiddler_revisions():
         tiddler = Tiddler(u'oh hi', bag_name)
         tiddler.text = u'%s times we go' % i
         tiddler.fields[u'%s' % i] = u'%s' % i
+        tiddler.fields[u'other%s' % i] = u'%s' % i
+        tiddler.fields[u'carutther%s' % i] = u'x%s' % i
         store.put(tiddler)
 
     revisions = store.list_tiddler_revisions(Tiddler('oh hi', bag_name))
@@ -185,6 +192,8 @@ def test_tiddler_revisions():
     assert tiddler.title == 'oh hi'
     assert tiddler.text == '13 times we go'
     assert tiddler.fields['13'] == '13'
+    assert tiddler.fields['other13'] == '13'
+    assert tiddler.fields['carutther13'] == 'x13'
     assert '12' not in tiddler.fields
 
     tiddler.revision = 90
