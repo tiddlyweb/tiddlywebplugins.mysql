@@ -44,7 +44,7 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 # logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 
-__version__ = '0.9.1'
+__version__ = '0.9.2'
 
 ENGINE = None
 MAPPED = False
@@ -106,8 +106,10 @@ class Store(SQLStore):
             except ParseException, exc:
                 raise StoreError('failed to parse search query: %s' % exc)
 
-            return (Tiddler(unicode(stiddler.tiddler_title),
-                unicode(stiddler.bag_name)) for stiddler in query.all())
+            for stiddler in query.all():
+                yield Tiddler(unicode(stiddler.tiddler_title),
+                        unicode(stiddler.bag_name))
+            self.session.close()
         except:
             self.session.rollback()
             raise
@@ -144,6 +146,7 @@ class Store(SQLStore):
                 stiddler = query.one()
                 base_tiddler = base_tiddler.one()
                 tiddler = self._load_tiddler(tiddler, stiddler, base_tiddler)
+                self.session.close()
                 return tiddler
             except NoResultFound, exc:
                 raise NoTiddlerError('Tiddler %s not found: %s' %

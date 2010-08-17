@@ -2,7 +2,7 @@ AUTHOR = 'Chris Dent'
 AUTHOR_EMAIL = 'cdent@peermore.com'
 NAME = 'tiddlywebplugins.mysql'
 DESCRIPTION = 'MySQL-based store for tiddlyweb'
-VERSION = '0.9.1' # don't forget to update mysql.py too
+VERSION = '0.9.2' # don't forget to update mysql.py too
 
 
 import os
@@ -23,7 +23,7 @@ setup(
     packages = find_packages(exclude=['test']),
     install_requires = ['setuptools',
         'tiddlyweb',
-        'tiddlywebplugins.sqlalchemy>=0.9.8',
+        'tiddlywebplugins.sqlalchemy>=0.9.9',
         'MySQL-python',
         'pyparsing',
         ],
