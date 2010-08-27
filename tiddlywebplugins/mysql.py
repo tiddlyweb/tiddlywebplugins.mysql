@@ -14,7 +14,7 @@ import logging
 
 from sqlalchemy import select
 from sqlalchemy.engine import create_engine
-from sqlalchemy.exc import ArgumentError, NoSuchTableError
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.sql.expression import and_, or_, text as text_, alias
 from sqlalchemy.sql import func, bindparam
 from sqlalchemy.schema import Table, PrimaryKeyConstraint
@@ -106,10 +106,13 @@ class Store(SQLStore):
             except ParseException, exc:
                 raise StoreError('failed to parse search query: %s' % exc)
 
-            for stiddler in query.all():
-                yield Tiddler(unicode(stiddler.tiddler_title),
-                        unicode(stiddler.bag_name))
-            self.session.close()
+            try:
+                for stiddler in query.all():
+                    yield Tiddler(unicode(stiddler.tiddler_title),
+                            unicode(stiddler.bag_name))
+                self.session.close()
+            except ProgrammingError, exc:
+                raise StoreError('generated search SQL incorrect: %s' % exc)
         except:
             self.session.rollback()
             raise
