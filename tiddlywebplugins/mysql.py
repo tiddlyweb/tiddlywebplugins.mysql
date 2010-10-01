@@ -171,10 +171,9 @@ def index_query(environ, **kwargs):
 
     try:
         tiddlers = storage.search(search_query=query)
+        return (store.get(tiddler) for tiddler in tiddlers)
     except StoreError, exc:
         raise FilterIndexRefused('error in the store: %s' % exc)
-
-    return (store.get(tiddler) for tiddler in tiddlers)
 
 
 # XXX borrowed from Whoosh
