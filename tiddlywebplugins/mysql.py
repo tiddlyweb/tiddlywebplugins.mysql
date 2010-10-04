@@ -44,7 +44,7 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 # logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 
-__version__ = '0.9.4'
+__version__ = '0.9.6'
 
 ENGINE = None
 MAPPED = False
@@ -164,6 +164,12 @@ def index_query(environ, **kwargs):
 
     queries = []
     for key, value in kwargs.items():
+        if '"' in value:
+            # XXX The current parser is currently unable to deal with
+            # nested quotes. Rather than running the risk of tweaking 
+            # the parser with unclear results, we instead just refuse
+            # for now. Later this can be fixed for real.
+            raise FilterIndexRefused('unable to process values with quotes')
         queries.append('%s:"%s"' % (key, value))
     query = ' '.join(queries)
     
