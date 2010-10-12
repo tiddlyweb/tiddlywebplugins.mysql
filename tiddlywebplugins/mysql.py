@@ -28,9 +28,9 @@ from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError, NoTiddlerError
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
-        sRevision, metadata, Session,
+        sRevision, sTag, metadata, Session,
         field_table, revision_table, bag_table, policy_table,
-        recipe_table, role_table, user_table)
+        recipe_table, role_table, user_table, tag_table)
 
 from tiddlyweb.filters import FilterIndexRefused
 
@@ -49,7 +49,7 @@ __version__ = '0.9.4'
 ENGINE = None
 MAPPED = False
 TABLES = [field_table, revision_table, bag_table, policy_table, recipe_table,
-        role_table, user_table]
+        role_table, user_table, tag_table]
 
 class Store(SQLStore):
 
@@ -80,12 +80,14 @@ class Store(SQLStore):
                         if column.name == 'tiddler_title':
                             column.type = VARCHAR(length=128,
                                     convert_unicode=True, collation='utf8_bin')
-                        if column.name == 'tags':
-                            column.type = VARCHAR(length=1024,
-                                    convert_unicode=True, collation='utf8_bin')
                         if column.name == 'text':
                             column.type = LONGTEXT(convert_unicode=True,
                                     collation='utf8_bin')
+                if table.name == 'tag':
+                    for column in table.columns:
+                        if column.name == 'tag':
+                            column.type = VARCHAR(length=256,
+                                    convert_unicode=True, collation='utf8_bin')
                             
             metadata.create_all(ENGINE)
             MAPPED = True
@@ -280,9 +282,10 @@ class Producer(object):
                 expression = and_(sRevision.bag_name == bag,
                         sRevision.tiddler_title == title)
             elif fieldname == 'tag':
-                # XXX: this is insufficiently specific
-                expression = sRevision.tags.op('regexp')('(^| {1})%s( {1}|$)'
-                        % value)
+                stag_alias = alias(tag_table)
+                expression = and_(
+                        stag_alias.c.revision_number == sRevision.number,
+                        stag_alias.c.tag == value)
             elif hasattr(sRevision, fieldname):
                 if like:
                     expression = (getattr(sRevision, fieldname).like(value))
@@ -301,7 +304,7 @@ class Producer(object):
                             sfield_alias.c.value == value)
         else:
             expression = (text_(
-                'MATCH(revision.tiddler_title, revision.text, revision.tags) '
+                'MATCH(revision.tiddler_title, revision.text) '
                 + 'AGAINST(:query in boolean mode)')
                 .params(query=value))
         return expression 
