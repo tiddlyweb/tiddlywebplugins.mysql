@@ -10,22 +10,16 @@ ALPHA!
 """
 from __future__ import absolute_import
 
-import logging
-
-from sqlalchemy import select
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.sql.expression import and_, or_, text as text_, alias
-from sqlalchemy.sql import func, bindparam
-from sqlalchemy.schema import Table, PrimaryKeyConstraint
-from sqlalchemy.orm import mapper, aliased, contains_alias
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.sql import func
 
 from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
 
 from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.serializer import Serializer
-from tiddlyweb.store import StoreError, NoTiddlerError
+from tiddlyweb.store import StoreError
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
         sRevision, metadata, Session,
@@ -113,47 +107,6 @@ class Store(SQLStore):
                 self.session.close()
             except ProgrammingError, exc:
                 raise StoreError('generated search SQL incorrect: %s' % exc)
-        except:
-            self.session.rollback()
-            raise
-
-    def tiddler_get(self, tiddler):
-        """
-        Override sqlalchemy store's tiddler_get to take advantage of
-        the head view.
-        XXX: head view is gone, refactor this back to twp.sqlalchemy
-        """
-        max_rev_alias = alias(revision_table)
-        max_statement = func.max(max_rev_alias.c.number)
-        max_statement = max_statement.select().where(and_(
-            max_rev_alias.c.tiddler_title==tiddler.title,
-            max_rev_alias.c.bag_name==tiddler.bag))
-
-        min_rev_alias = alias(revision_table)
-        min_statement = func.min(min_rev_alias.c.number)
-        min_statement = min_statement.select().where(and_(
-            min_rev_alias.c.tiddler_title==tiddler.title,
-            min_rev_alias.c.bag_name==tiddler.bag))
-        try:
-            try:
-                query = (self.session.query(sRevision)
-                        .filter(sRevision.tiddler_title == tiddler.title)
-                        .filter(sRevision.bag_name == tiddler.bag))
-                base_tiddler = query.filter(
-                        sRevision.number==min_statement)
-                if tiddler.revision:
-                    query = query.filter(sRevision.number == tiddler.revision)
-                else:
-                    query = query.filter(
-                            sRevision.number==max_statement)
-                stiddler = query.one()
-                base_tiddler = base_tiddler.one()
-                tiddler = self._load_tiddler(tiddler, stiddler, base_tiddler)
-                self.session.close()
-                return tiddler
-            except NoResultFound, exc:
-                raise NoTiddlerError('Tiddler %s not found: %s' %
-                        (tiddler.title, exc))
         except:
             self.session.rollback()
             raise
