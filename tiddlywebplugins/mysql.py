@@ -38,7 +38,7 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 # logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 
-__version__ = '0.9.7'
+__version__ = '0.9.8'
 
 ENGINE = None
 MAPPED = False
