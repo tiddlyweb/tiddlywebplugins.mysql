@@ -36,7 +36,8 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 #import logging
 #logging.basicConfig()
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-# logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
+#logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
+#logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
 __version__ = '0.9.8'
 
@@ -56,11 +57,11 @@ class Store(SQLStore):
         if not ENGINE:
             ENGINE = create_engine(self._db_config(),
                     pool_recycle=3600,
-                    pool_size=20,
-                    max_overflow=10,
-                    pool_timeout=20)
-        metadata.bind = ENGINE
-        Session.configure(bind=ENGINE)
+                    pool_size=20,  # XXX these three ought to come from config
+                    max_overflow=-1,
+                    pool_timeout=2)
+            metadata.bind = ENGINE
+            Session.configure(bind=ENGINE)
         self.session = Session()
         self.serializer = Serializer('text')
         self.parser = DEFAULT_PARSER
