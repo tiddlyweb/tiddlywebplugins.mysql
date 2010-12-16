@@ -6,7 +6,6 @@ for accelerating filters.
 http://github.com/cdent/tiddlywebplugins.mysql
 http://tiddlyweb.com/
 
-ALPHA!
 """
 from __future__ import absolute_import
 
@@ -39,7 +38,7 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '0.9.9'
+__version__ = '0.9.10'
 
 ENGINE = None
 MAPPED = False
