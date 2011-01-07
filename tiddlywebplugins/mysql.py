@@ -274,7 +274,6 @@ class Producer(object):
                 else:
                     expression = (getattr(sRevision, fieldname) == value)
             else:
-                print 'fieldname', fieldname, value, self.joined_fields, self.in_and, self.in_or
                 if self.in_and:
                     field_alias = alias(field_table)
                     self.query = self.query.join((field_alias,
