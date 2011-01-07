@@ -10,22 +10,16 @@ ALPHA!
 """
 from __future__ import absolute_import
 
-import logging
-
-from sqlalchemy import select
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.sql.expression import and_, or_, text as text_, alias
-from sqlalchemy.sql import func, bindparam
-from sqlalchemy.schema import Table, PrimaryKeyConstraint
-from sqlalchemy.orm import mapper, aliased, contains_alias
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.sql import func
 
 from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
 
 from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.serializer import Serializer
-from tiddlyweb.store import StoreError, NoTiddlerError
+from tiddlyweb.store import StoreError
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
         sRevision, sTag, metadata, Session,
@@ -42,9 +36,10 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 #import logging
 #logging.basicConfig()
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-# logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
+#logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
+#logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '0.9.4'
+__version__ = '0.9.9'
 
 ENGINE = None
 MAPPED = False
@@ -62,11 +57,11 @@ class Store(SQLStore):
         if not ENGINE:
             ENGINE = create_engine(self._db_config(),
                     pool_recycle=3600,
-                    pool_size=20,
-                    max_overflow=10,
-                    pool_timeout=20)
-        metadata.bind = ENGINE
-        Session.configure(bind=ENGINE)
+                    pool_size=20,  # XXX these three ought to come from config
+                    max_overflow=-1,
+                    pool_timeout=2)
+            metadata.bind = ENGINE
+            Session.configure(bind=ENGINE)
         self.session = Session()
         self.serializer = Serializer('text')
         self.parser = DEFAULT_PARSER
@@ -119,53 +114,18 @@ class Store(SQLStore):
             self.session.rollback()
             raise
 
-    def tiddler_get(self, tiddler):
-        """
-        Override sqlalchemy store's tiddler_get to take advantage of
-        the head view.
-        XXX: head view is gone, refactor this back to twp.sqlalchemy
-        """
-        max_rev_alias = alias(revision_table)
-        max_statement = func.max(max_rev_alias.c.number)
-        max_statement = max_statement.select().where(and_(
-            max_rev_alias.c.tiddler_title==tiddler.title,
-            max_rev_alias.c.bag_name==tiddler.bag))
-
-        min_rev_alias = alias(revision_table)
-        min_statement = func.min(min_rev_alias.c.number)
-        min_statement = min_statement.select().where(and_(
-            min_rev_alias.c.tiddler_title==tiddler.title,
-            min_rev_alias.c.bag_name==tiddler.bag))
-        try:
-            try:
-                query = (self.session.query(sRevision)
-                        .filter(sRevision.tiddler_title == tiddler.title)
-                        .filter(sRevision.bag_name == tiddler.bag))
-                base_tiddler = query.filter(
-                        sRevision.number==min_statement)
-                if tiddler.revision:
-                    query = query.filter(sRevision.number == tiddler.revision)
-                else:
-                    query = query.filter(
-                            sRevision.number==max_statement)
-                stiddler = query.one()
-                base_tiddler = base_tiddler.one()
-                tiddler = self._load_tiddler(tiddler, stiddler, base_tiddler)
-                self.session.close()
-                return tiddler
-            except NoResultFound, exc:
-                raise NoTiddlerError('Tiddler %s not found: %s' %
-                        (tiddler.title, exc))
-        except:
-            self.session.rollback()
-            raise
-
 
 def index_query(environ, **kwargs):
     store = environ['tiddlyweb.store']
 
     queries = []
     for key, value in kwargs.items():
+        if '"' in value:
+            # XXX The current parser is currently unable to deal with
+            # nested quotes. Rather than running the risk of tweaking 
+            # the parser with unclear results, we instead just refuse
+            # for now. Later this can be fixed for real.
+            raise FilterIndexRefused('unable to process values with quotes')
         queries.append('%s:"%s"' % (key, value))
     query = ' '.join(queries)
     
