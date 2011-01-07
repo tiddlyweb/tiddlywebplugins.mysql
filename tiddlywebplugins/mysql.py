@@ -12,7 +12,8 @@ from __future__ import absolute_import
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError
-from sqlalchemy.sql.expression import and_, or_, text as text_, alias
+from sqlalchemy.sql.expression import (and_, or_, text as text_, alias,
+        join as join_)
 from sqlalchemy.sql import func
 
 from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
@@ -76,19 +77,21 @@ class Store(SQLStore):
                                 or column.name == 'title'):
                             column.type = VARCHAR(length=128,
                                     convert_unicode=True, collation='utf8_bin')
-                        if column.name == 'tags':
-                            column.type = VARCHAR(length=1024,
-                                    convert_unicode=True, collation='utf8_bin')
                         if column.name == 'text':
                             column.type = LONGTEXT(convert_unicode=True,
                                     collation='utf8_bin')
+                if table.name == 'tag':
+                    for column in table.columns:
+                        if column.name == 'tag':
+                            column.type = VARCHAR(length=256,
+                                    convert_unicode=True, collation='utf8_bin')
                             
             metadata.create_all(ENGINE)
             MAPPED = True
 
 
     def search(self, search_query=''):
-        query = self.session.query(sTiddler.bag_name, sTiddler.title)
+        query = self.session.query(sRevision.bag_name, sRevision.tiddler_title)
         query = query.join(sTiddler.current)
         try:
             try:
@@ -99,7 +102,7 @@ class Store(SQLStore):
 
             try:
                 for stiddler in query.all():
-                    yield Tiddler(unicode(stiddler.title),
+                    yield Tiddler(unicode(stiddler.tiddler_title),
                             unicode(stiddler.bag_name))
                 self.session.close()
             except ProgrammingError, exc:
@@ -205,8 +208,13 @@ DEFAULT_PARSER = _make_default_parser()
 class Producer(object):
 
     def produce(self, ast, query):
+        self.joined_tags = False
+        self.joined_fields = False
+        self.in_and = False
+        self.in_or = False
+        self.query = query
         expressions = self._eval(ast, None) 
-        return query.filter(expressions)
+        return self.query.filter(expressions)
 
     def _eval(self, node, fieldname):
         name = node.getName()
@@ -236,31 +244,69 @@ class Producer(object):
                 expression = and_(sRevision.bag_name == bag,
                         sRevision.tiddler_title == title)
             elif fieldname == 'tag':
-                stag_alias = alias(tag_table)
-                if like:
-                    expression = and_(
-                            stag_alias.c.revision_number == sRevision.number,
-                            stag_alias.c.tag.like(value))
+                if self.in_and:
+                    tag_alias = alias(tag_table)
+                    self.query = self.query.join((tag_alias,
+                            (tag_alias.c.revision_number
+                                == revision_table.c.number)))
+                    if like:
+                        expression = (tag_alias.c.tag.like(value))
+                    else:
+                        expression = (tag_alias.c.tag == value)
                 else:
-                    expression = and_(
-                            stag_alias.c.revision_number == sRevision.number,
-                            stag_alias.c.tag == value)
+                    if not self.joined_tags:
+                        self.query = self.query.join((tag_table,
+                                (tag_table.c.revision_number
+                                    == revision_table.c.number)))
+                        if like:
+                            expression = (tag_table.c.tag.like(value))
+                        else:
+                            expression = (tag_table.c.tag == value)
+                        self.joined_tags = True
+                    else:
+                        if like:
+                            expression = (tag_table.c.tag.like(value))
+                        else:
+                            expression = (tag_table.c.tag == value)
             elif hasattr(sRevision, fieldname):
                 if like:
                     expression = (getattr(sRevision, fieldname).like(value))
                 else:
                     expression = (getattr(sRevision, fieldname) == value)
             else:
-                sfield_alias = alias(field_table)
-                expression = and_(
-                        sfield_alias.c.revision_number == sRevision.number,
-                        sfield_alias.c.name == fieldname)
-                if like:
-                    expression = and_(expression,
-                            sfield_alias.c.value.like(value))
+                print 'fieldname', fieldname, value, self.joined_fields, self.in_and, self.in_or
+                if self.in_and:
+                    field_alias = alias(field_table)
+                    self.query = self.query.join((field_alias,
+                            (field_alias.c.revision_number
+                                == revision_table.c.number)))
+                    expression = (field_alias.c.name == fieldname)
+                    if like:
+                        expression = and_(expression,
+                                field_alias.c.value.like(value))
+                    else:
+                        expression = and_(expression,
+                                field_alias.c.value == value)
                 else:
-                    expression = and_(expression,
-                            sfield_alias.c.value == value)
+                    if not self.joined_fields:
+                        self.query = self.query.join((field_table,
+                                (field_table.c.revision_number == revision_table.c.number)))
+                        expression = (field_table.c.name == fieldname)
+                        if like:
+                            expression = and_(expression,
+                                    field_table.c.value.like(value))
+                        else:
+                            expression = and_(expression,
+                                    field_table.c.value == value)
+                        self.joined_fields = True
+                    else:
+                        expression = (field_table.c.name == fieldname)
+                        if like:
+                            expression = and_(expression,
+                                    field_table.c.value.like(value))
+                        else:
+                            expression = and_(expression,
+                                    field_table.c.value == value)
         else:
             expression = (text_(
                 'MATCH(revision.tiddler_title, revision.text) '
@@ -279,14 +325,18 @@ class Producer(object):
 
     def _Or(self, node, fieldname):
         expressions = []
+        self.in_or = True
         for subnode in node: 
             expressions.append(self._eval(subnode, fieldname))
+        self.in_or = False
         return or_(*expressions)
 
     def _And(self, node, fieldname):
         expressions = []
+        self.in_and = True
         for subnode in node: 
             expressions.append(self._eval(subnode, fieldname))
+        self.in_and = False
         return and_(*expressions)
 
     def _Quotes(self, node, fieldname):
