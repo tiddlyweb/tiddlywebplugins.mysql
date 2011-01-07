@@ -22,9 +22,9 @@ from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
-        sRevision, metadata, Session,
-        field_table, revision_table, bag_table, policy_table,
-        recipe_table, role_table, user_table)
+        sTiddler, sRevision, sTag, metadata, Session,
+        field_table, tiddler_table, revision_table, bag_table,
+        policy_table, recipe_table, role_table, user_table, tag_table)
 
 from tiddlyweb.filters import FilterIndexRefused
 
@@ -33,9 +33,9 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
         Word, Keyword, Empty, White, Forward, QuotedString, StringEnd,
         ParseException)
 
-#import logging
-#logging.basicConfig()
-#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+import logging
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
@@ -43,8 +43,8 @@ __version__ = '0.9.9'
 
 ENGINE = None
 MAPPED = False
-TABLES = [field_table, revision_table, bag_table, policy_table, recipe_table,
-        role_table, user_table]
+TABLES = [field_table, revision_table, tiddler_table, bag_table,
+        policy_table, recipe_table, role_table, user_table, tag_table]
 
 class Store(SQLStore):
 
@@ -70,15 +70,20 @@ class Store(SQLStore):
         if not MAPPED:
             for table in TABLES:
                 table.kwargs['mysql_charset'] = 'utf8'
-                if table.name == 'revision':
+                print table.name
+                if table.name == 'revision' or table.name == 'tiddler':
                     for column in table.columns:
-                        if column.name == 'tiddler_title':
+                        print column.name
+                        if (column.name == 'tiddler_title'
+                                or column.name == 'title'):
+                            print 'updating', column.name
                             column.type = VARCHAR(length=128,
                                     convert_unicode=True, collation='utf8_bin')
                         if column.name == 'tags':
                             column.type = VARCHAR(length=1024,
                                     convert_unicode=True, collation='utf8_bin')
                         if column.name == 'text':
+                            print 'updating', column.name
                             column.type = LONGTEXT(convert_unicode=True,
                                     collation='utf8_bin')
                             
@@ -87,13 +92,8 @@ class Store(SQLStore):
 
 
     def search(self, search_query=''):
-        rev_alias = alias(revision_table)
-        statement = func.max(rev_alias.c.number)
-        statement = statement.select().where(and_(
-            sRevision.tiddler_title==rev_alias.c.tiddler_title,
-            sRevision.bag_name==rev_alias.c.bag_name))
-        query = self.session.query(sRevision.bag_name, sRevision.tiddler_title)
-        query = query.filter(sRevision.number==statement)
+        query = self.session.query(sTiddler.bag_name, sTiddler.title)
+        query = query.join(sTiddler.current)
         try:
             try:
                 ast = self.parser(search_query)[0]
@@ -103,7 +103,7 @@ class Store(SQLStore):
 
             try:
                 for stiddler in query.all():
-                    yield Tiddler(unicode(stiddler.tiddler_title),
+                    yield Tiddler(unicode(stiddler.title),
                             unicode(stiddler.bag_name))
                 self.session.close()
             except ProgrammingError, exc:
