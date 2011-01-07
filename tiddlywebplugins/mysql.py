@@ -33,9 +33,9 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
         Word, Keyword, Empty, White, Forward, QuotedString, StringEnd,
         ParseException)
 
-import logging
-logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+#import logging
+#logging.basicConfig()
+#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
@@ -70,20 +70,16 @@ class Store(SQLStore):
         if not MAPPED:
             for table in TABLES:
                 table.kwargs['mysql_charset'] = 'utf8'
-                print table.name
                 if table.name == 'revision' or table.name == 'tiddler':
                     for column in table.columns:
-                        print column.name
                         if (column.name == 'tiddler_title'
                                 or column.name == 'title'):
-                            print 'updating', column.name
                             column.type = VARCHAR(length=128,
                                     convert_unicode=True, collation='utf8_bin')
                         if column.name == 'tags':
                             column.type = VARCHAR(length=1024,
                                     convert_unicode=True, collation='utf8_bin')
                         if column.name == 'text':
-                            print 'updating', column.name
                             column.type = LONGTEXT(convert_unicode=True,
                                     collation='utf8_bin')
                             
@@ -240,9 +236,15 @@ class Producer(object):
                 expression = and_(sRevision.bag_name == bag,
                         sRevision.tiddler_title == title)
             elif fieldname == 'tag':
-                # XXX: this is insufficiently specific
-                expression = sRevision.tags.op('regexp')('(^| {1})%s( {1}|$)'
-                        % value)
+                stag_alias = alias(tag_table)
+                if like:
+                    expression = and_(
+                            stag_alias.c.revision_number == sRevision.number,
+                            stag_alias.c.tag.like(value))
+                else:
+                    expression = and_(
+                            stag_alias.c.revision_number == sRevision.number,
+                            stag_alias.c.tag == value)
             elif hasattr(sRevision, fieldname):
                 if like:
                     expression = (getattr(sRevision, fieldname).like(value))
@@ -261,7 +263,7 @@ class Producer(object):
                             sfield_alias.c.value == value)
         else:
             expression = (text_(
-                'MATCH(revision.tiddler_title, revision.text, revision.tags) '
+                'MATCH(revision.tiddler_title, revision.text) '
                 + 'AGAINST(:query in boolean mode)')
                 .params(query=value))
         return expression 

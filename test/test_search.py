@@ -1,4 +1,3 @@
-import sys
 from tiddlyweb.config import config
 
 from tiddlyweb.model.tiddler import Tiddler
