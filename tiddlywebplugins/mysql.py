@@ -86,6 +86,11 @@ class Store(SQLStore):
                         if column.name == 'tag':
                             column.type = VARCHAR(length=256,
                                     convert_unicode=True, collation='utf8_bin')
+                if table.name == 'field':
+                    for column in table.columns:
+                        if column.name == 'value':
+                            column.type = VARCHAR(length=256,
+                                    convert_unicode=True, collation='utf8_bin')
                             
             metadata.create_all(ENGINE)
             MAPPED = True
