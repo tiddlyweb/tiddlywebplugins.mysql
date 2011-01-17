@@ -47,6 +47,31 @@ MAPPED = False
 TABLES = [field_table, revision_table, tiddler_table, bag_table,
         policy_table, recipe_table, role_table, user_table, tag_table]
 
+
+class LookLively(object):
+    """
+    Ensures that MySQL connections checked out of the
+    pool are alive.
+
+    Borrowed from:
+    http://groups.google.com/group/sqlalchemy/msg/a4ce563d802c929f
+    """ 
+
+    def checkout(self, dbapi_con, con_record, con_proxy): 
+        try:
+            try:
+                dbapi_con.ping(False)
+            except TypeError:
+                dbapi_con.ping()
+        except dbapi_con.OperationalError, ex:
+            if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
+                logging.warn('got mysql server has gone away: %s', ex)
+                # caught by pool, which will retry with a new connection
+                raise exc.DisconnectionError()
+            else:
+                raise 
+
+
 class Store(SQLStore):
 
     def _init_store(self):
@@ -60,7 +85,8 @@ class Store(SQLStore):
                     pool_recycle=3600,
                     pool_size=20,  # XXX these three ought to come from config
                     max_overflow=-1,
-                    pool_timeout=2)
+                    pool_timeout=2,
+                    listeners=[LookLively()])
             metadata.bind = ENGINE
             Session.configure(bind=ENGINE)
         self.session = Session()
