@@ -5,8 +5,8 @@ from tiddlyweb.model.bag import Bag
 
 from tiddlywebplugins.utils import get_store
 
-from tiddlywebplugins.mysql import index_query
-from tiddlywebplugins.sqlalchemy import (sField, sRevision, sText,
+from tiddlywebplugins.mysql2 import index_query
+from tiddlywebplugins.sqlalchemy2 import (sField, sRevision, sText,
         sBag, sRecipe, sUser, sPolicy, sRole, sTag, sTiddler)
 
 def setup_module(module):

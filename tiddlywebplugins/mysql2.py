@@ -22,7 +22,7 @@ from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError
 
-from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
+from tiddlywebplugins.sqlalchemy2 import (Store as SQLStore,
         sTiddler, sRevision, sTag, metadata, Session,
         field_table, tiddler_table, revision_table, bag_table, text_table,
         policy_table, recipe_table, role_table, user_table, tag_table)
@@ -40,7 +40,7 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '0.9.9'
+__version__ = '2.0.0'
 
 ENGINE = None
 MAPPED = False
