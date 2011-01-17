@@ -1,17 +1,9 @@
 A plugin for TiddlyWeb subclassing tiddlywebplugins.sqlalchemy with mysql specifics.
 
-The main additions here are two:
+This package is superceeded by tiddlywebplugins.mysql2 which has
+better performance and robustness by using a different schema.
 
-* Provide a reasonable search interface using mysql's fulltext.
-* Provide an index_query method to allow the plugin to be used as
-  an 'indexer' for filters and determine_bag_for_tiddler.
-
-This means we'll be incorporating code learnings from
-tiddlywebplugins.whoosher and tiddlywebplugins.mappinsql. In fact
-this plugin is being built to replace tiddlywebplugins.whoosher
-which doesn't handle concurrency well.
-
-Copyright 2010, Chris Dent <cdent@peermore.com>
+Copyright 2011, Chris Dent <cdent@peermore.com>
 
 Licensed as TiddlyWeb itself.
 
