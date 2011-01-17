@@ -11,7 +11,8 @@ from __future__ import absolute_import
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError
-from sqlalchemy.sql.expression import and_, or_, text as text_, alias
+from sqlalchemy.sql.expression import (and_, or_, text as text_, alias,
+        join as join_)
 from sqlalchemy.sql import func
 
 from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
@@ -20,10 +21,10 @@ from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError
 
-from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
-        sRevision, metadata, Session,
-        field_table, revision_table, bag_table, policy_table,
-        recipe_table, role_table, user_table)
+from tiddlywebplugins.sqlalchemy2 import (Store as SQLStore,
+        sTiddler, sRevision, sTag, metadata, Session,
+        field_table, tiddler_table, revision_table, bag_table, text_table,
+        policy_table, recipe_table, role_table, user_table, tag_table)
 
 from tiddlyweb.filters import FilterIndexRefused
 
@@ -38,12 +39,37 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '0.9.10'
+__version__ = '2.0.0'
 
 ENGINE = None
 MAPPED = False
-TABLES = [field_table, revision_table, bag_table, policy_table, recipe_table,
-        role_table, user_table]
+TABLES = [field_table, revision_table, tiddler_table, bag_table, text_table,
+        policy_table, recipe_table, role_table, user_table, tag_table]
+
+
+class LookLively(object):
+    """
+    Ensures that MySQL connections checked out of the
+    pool are alive.
+
+    Borrowed from:
+    http://groups.google.com/group/sqlalchemy/msg/a4ce563d802c929f
+    """ 
+
+    def checkout(self, dbapi_con, con_record, con_proxy): 
+        try:
+            try:
+                dbapi_con.ping(False)
+            except TypeError:
+                dbapi_con.ping()
+        except dbapi_con.OperationalError, ex:
+            if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
+                logging.warn('got mysql server has gone away: %s', ex)
+                # caught by pool, which will retry with a new connection
+                raise exc.DisconnectionError()
+            else:
+                raise 
+
 
 class Store(SQLStore):
 
@@ -58,7 +84,8 @@ class Store(SQLStore):
                     pool_recycle=3600,
                     pool_size=20,  # XXX these three ought to come from config
                     max_overflow=-1,
-                    pool_timeout=2)
+                    pool_timeout=2,
+                    listeners=[LookLively()])
             metadata.bind = ENGINE
             Session.configure(bind=ENGINE)
         self.session = Session()
@@ -69,30 +96,34 @@ class Store(SQLStore):
         if not MAPPED:
             for table in TABLES:
                 table.kwargs['mysql_charset'] = 'utf8'
-                if table.name == 'revision':
+                if table.name == 'revision' or table.name == 'tiddler':
                     for column in table.columns:
-                        if column.name == 'tiddler_title':
+                        if (column.name == 'tiddler_title'
+                                or column.name == 'title'):
                             column.type = VARCHAR(length=128,
                                     convert_unicode=True, collation='utf8_bin')
-                        if column.name == 'tags':
-                            column.type = VARCHAR(length=1024,
-                                    convert_unicode=True, collation='utf8_bin')
+                if table.name == 'text':
                         if column.name == 'text':
                             column.type = LONGTEXT(convert_unicode=True,
                                     collation='utf8_bin')
+                if table.name == 'tag':
+                    for column in table.columns:
+                        if column.name == 'tag':
+                            column.type = VARCHAR(length=256,
+                                    convert_unicode=True, collation='utf8_bin')
+                if table.name == 'field':
+                    for column in table.columns:
+                        if column.name == 'value':
+                            column.type = VARCHAR(length=256,
+                                    convert_unicode=True, collation='utf8_bin')
                             
             metadata.create_all(ENGINE)
             MAPPED = True
 
 
     def search(self, search_query=''):
-        rev_alias = alias(revision_table)
-        statement = func.max(rev_alias.c.number)
-        statement = statement.select().where(and_(
-            sRevision.tiddler_title==rev_alias.c.tiddler_title,
-            sRevision.bag_name==rev_alias.c.bag_name))
         query = self.session.query(sRevision.bag_name, sRevision.tiddler_title)
-        query = query.filter(sRevision.number==statement)
+        query = query.distinct().join(sTiddler.current)
         try:
             try:
                 ast = self.parser(search_query)[0]
@@ -200,8 +231,14 @@ DEFAULT_PARSER = _make_default_parser()
 class Producer(object):
 
     def produce(self, ast, query):
+        self.joined_tags = False
+        self.joined_fields = False
+        self.joined_text = False
+        self.in_and = False
+        self.in_or = False
+        self.query = query
         expressions = self._eval(ast, None) 
-        return query.filter(expressions)
+        return self.query.filter(expressions)
 
     def _eval(self, node, fieldname):
         name = node.getName()
@@ -231,28 +268,77 @@ class Producer(object):
                 expression = and_(sRevision.bag_name == bag,
                         sRevision.tiddler_title == title)
             elif fieldname == 'tag':
-                # XXX: this is insufficiently specific
-                expression = sRevision.tags.op('regexp')('(^| {1})%s( {1}|$)'
-                        % value)
+                if self.in_and:
+                    tag_alias = alias(tag_table)
+                    self.query = self.query.join((tag_alias,
+                            (tag_alias.c.revision_number
+                                == revision_table.c.number)))
+                    if like:
+                        expression = (tag_alias.c.tag.like(value))
+                    else:
+                        expression = (tag_alias.c.tag == value)
+                else:
+                    if not self.joined_tags:
+                        self.query = self.query.join((tag_table,
+                                (tag_table.c.revision_number
+                                    == revision_table.c.number)))
+                        if like:
+                            expression = (tag_table.c.tag.like(value))
+                        else:
+                            expression = (tag_table.c.tag == value)
+                        self.joined_tags = True
+                    else:
+                        if like:
+                            expression = (tag_table.c.tag.like(value))
+                        else:
+                            expression = (tag_table.c.tag == value)
             elif hasattr(sRevision, fieldname):
                 if like:
                     expression = (getattr(sRevision, fieldname).like(value))
                 else:
                     expression = (getattr(sRevision, fieldname) == value)
             else:
-                sfield_alias = alias(field_table)
-                expression = and_(
-                        sfield_alias.c.revision_number == sRevision.number,
-                        sfield_alias.c.name == fieldname)
-                if like:
-                    expression = and_(expression,
-                            sfield_alias.c.value.like(value))
+                if self.in_and:
+                    field_alias = alias(field_table)
+                    self.query = self.query.join((field_alias,
+                            (field_alias.c.revision_number
+                                == revision_table.c.number)))
+                    expression = (field_alias.c.name == fieldname)
+                    if like:
+                        expression = and_(expression,
+                                field_alias.c.value.like(value))
+                    else:
+                        expression = and_(expression,
+                                field_alias.c.value == value)
                 else:
-                    expression = and_(expression,
-                            sfield_alias.c.value == value)
+                    if not self.joined_fields:
+                        self.query = self.query.join((field_table,
+                                (field_table.c.revision_number
+                                    == revision_table.c.number)))
+                        expression = (field_table.c.name == fieldname)
+                        if like:
+                            expression = and_(expression,
+                                    field_table.c.value.like(value))
+                        else:
+                            expression = and_(expression,
+                                    field_table.c.value == value)
+                        self.joined_fields = True
+                    else:
+                        expression = (field_table.c.name == fieldname)
+                        if like:
+                            expression = and_(expression,
+                                    field_table.c.value.like(value))
+                        else:
+                            expression = and_(expression,
+                                    field_table.c.value == value)
         else:
+            if not self.joined_text:
+                self.query = self.query.join((text_table,
+                        (text_table.c.revision_number
+                            == revision_table.c.number)))
+                self_joined_text = True
             expression = (text_(
-                'MATCH(revision.tiddler_title, revision.text, revision.tags) '
+                'MATCH(text.text) '
                 + 'AGAINST(:query in boolean mode)')
                 .params(query=value))
         return expression 
@@ -268,14 +354,18 @@ class Producer(object):
 
     def _Or(self, node, fieldname):
         expressions = []
+        self.in_or = True
         for subnode in node: 
             expressions.append(self._eval(subnode, fieldname))
+        self.in_or = False
         return or_(*expressions)
 
     def _And(self, node, fieldname):
         expressions = []
+        self.in_and = True
         for subnode in node: 
             expressions.append(self._eval(subnode, fieldname))
+        self.in_and = False
         return and_(*expressions)
 
     def _Quotes(self, node, fieldname):
