@@ -24,7 +24,7 @@ from tiddlyweb.store import StoreError
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
         sTiddler, sRevision, sTag, metadata, Session,
-        field_table, tiddler_table, revision_table, bag_table,
+        field_table, tiddler_table, revision_table, bag_table, text_table,
         policy_table, recipe_table, role_table, user_table, tag_table)
 
 from tiddlyweb.filters import FilterIndexRefused
@@ -44,7 +44,7 @@ __version__ = '0.9.9'
 
 ENGINE = None
 MAPPED = False
-TABLES = [field_table, revision_table, tiddler_table, bag_table,
+TABLES = [field_table, revision_table, tiddler_table, bag_table, text_table,
         policy_table, recipe_table, role_table, user_table, tag_table]
 
 
@@ -103,6 +103,7 @@ class Store(SQLStore):
                                 or column.name == 'title'):
                             column.type = VARCHAR(length=128,
                                     convert_unicode=True, collation='utf8_bin')
+                if table.name == 'text':
                         if column.name == 'text':
                             column.type = LONGTEXT(convert_unicode=True,
                                     collation='utf8_bin')
@@ -236,6 +237,7 @@ class Producer(object):
     def produce(self, ast, query):
         self.joined_tags = False
         self.joined_fields = False
+        self.joined_text = False
         self.in_and = False
         self.in_or = False
         self.query = query
@@ -315,7 +317,8 @@ class Producer(object):
                 else:
                     if not self.joined_fields:
                         self.query = self.query.join((field_table,
-                                (field_table.c.revision_number == revision_table.c.number)))
+                                (field_table.c.revision_number
+                                    == revision_table.c.number)))
                         expression = (field_table.c.name == fieldname)
                         if like:
                             expression = and_(expression,
@@ -333,8 +336,13 @@ class Producer(object):
                             expression = and_(expression,
                                     field_table.c.value == value)
         else:
+            if not self.joined_text:
+                self.query = self.query.join((text_table,
+                        (text_table.c.revision_number
+                            == revision_table.c.number)))
+                self_joined_text = True
             expression = (text_(
-                'MATCH(revision.tiddler_title, revision.text) '
+                'MATCH(text.text) '
                 + 'AGAINST(:query in boolean mode)')
                 .params(query=value))
         return expression 
