@@ -1,4 +1,4 @@
-A plugin for TiddlyWeb subclassing tiddlywebplugins.sqlalchemy with mysql specifics.
+A plugin for TiddlyWeb subclassing tiddlywebplugins.sqlalchemy2 with mysql specifics.
 
 The main additions here are two:
 
@@ -6,12 +6,7 @@ The main additions here are two:
 * Provide an index_query method to allow the plugin to be used as
   an 'indexer' for filters and determine_bag_for_tiddler.
 
-This means we'll be incorporating code learnings from
-tiddlywebplugins.whoosher and tiddlywebplugins.mappinsql. In fact
-this plugin is being built to replace tiddlywebplugins.whoosher
-which doesn't handle concurrency well.
-
-Copyright 2010, Chris Dent <cdent@peermore.com>
+Copyright 2011, Chris Dent <cdent@peermore.com>
 
 Licensed as TiddlyWeb itself.
 
@@ -30,6 +25,11 @@ add the following to tiddlywebconfig.py:
     'server_store': ['tiddlywebplugins.mysql', {
         'db_config': 'mysql:///tiddlyweb?charset=utf8&use_unicode=0'}],
     'indexer': 'tiddlywebplugins.mysql',
+
+If you want to use the fulltext indexing capability you will need to
+create the fulltext index:
+
+    CREATE FULLTEXT INDEX tiddlytext ON text(text);
 
 Thanks to Adrian Hosey <http://adrianhosey.blogspot.com/> for help over
 some SQL humps.

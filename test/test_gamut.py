@@ -13,7 +13,7 @@ from tiddlyweb.model.user import User
 
 from base64 import b64encode
 
-from tiddlywebplugins.sqlalchemy import (sField, sRevision,
+from tiddlywebplugins.sqlalchemy2 import (sField, sRevision,
         sBag, sRecipe, sUser, sPolicy, sText, sRole, sTiddler, sTag)
 
 #RANGE = 1000

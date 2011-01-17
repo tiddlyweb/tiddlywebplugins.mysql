@@ -22,7 +22,7 @@ from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError
 
-from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
+from tiddlywebplugins.sqlalchemy2 import (Store as SQLStore,
         sTiddler, sRevision, sTag, metadata, Session,
         field_table, tiddler_table, revision_table, bag_table, text_table,
         policy_table, recipe_table, role_table, user_table, tag_table)
@@ -40,12 +40,37 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '0.9.9'
+__version__ = '2.0.0'
 
 ENGINE = None
 MAPPED = False
 TABLES = [field_table, revision_table, tiddler_table, bag_table, text_table,
         policy_table, recipe_table, role_table, user_table, tag_table]
+
+
+class LookLively(object):
+    """
+    Ensures that MySQL connections checked out of the
+    pool are alive.
+
+    Borrowed from:
+    http://groups.google.com/group/sqlalchemy/msg/a4ce563d802c929f
+    """ 
+
+    def checkout(self, dbapi_con, con_record, con_proxy): 
+        try:
+            try:
+                dbapi_con.ping(False)
+            except TypeError:
+                dbapi_con.ping()
+        except dbapi_con.OperationalError, ex:
+            if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
+                logging.warn('got mysql server has gone away: %s', ex)
+                # caught by pool, which will retry with a new connection
+                raise exc.DisconnectionError()
+            else:
+                raise 
+
 
 class Store(SQLStore):
 
@@ -60,7 +85,8 @@ class Store(SQLStore):
                     pool_recycle=3600,
                     pool_size=20,  # XXX these three ought to come from config
                     max_overflow=-1,
-                    pool_timeout=2)
+                    pool_timeout=2,
+                    listeners=[LookLively()])
             metadata.bind = ENGINE
             Session.configure(bind=ENGINE)
         self.session = Session()
