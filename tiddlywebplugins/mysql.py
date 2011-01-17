@@ -6,7 +6,6 @@ for accelerating filters.
 http://github.com/cdent/tiddlywebplugins.mysql
 http://tiddlyweb.com/
 
-ALPHA!
 """
 from __future__ import absolute_import
 
@@ -22,9 +21,9 @@ from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError
 
 from tiddlywebplugins.sqlalchemy import (Store as SQLStore,
-        sRevision, sTag, metadata, Session,
+        sRevision, metadata, Session,
         field_table, revision_table, bag_table, policy_table,
-        recipe_table, role_table, user_table, tag_table)
+        recipe_table, role_table, user_table)
 
 from tiddlyweb.filters import FilterIndexRefused
 
@@ -44,7 +43,7 @@ __version__ = '0.9.10'
 ENGINE = None
 MAPPED = False
 TABLES = [field_table, revision_table, bag_table, policy_table, recipe_table,
-        role_table, user_table, tag_table]
+        role_table, user_table]
 
 class Store(SQLStore):
 
@@ -75,14 +74,12 @@ class Store(SQLStore):
                         if column.name == 'tiddler_title':
                             column.type = VARCHAR(length=128,
                                     convert_unicode=True, collation='utf8_bin')
+                        if column.name == 'tags':
+                            column.type = VARCHAR(length=1024,
+                                    convert_unicode=True, collation='utf8_bin')
                         if column.name == 'text':
                             column.type = LONGTEXT(convert_unicode=True,
                                     collation='utf8_bin')
-                if table.name == 'tag':
-                    for column in table.columns:
-                        if column.name == 'tag':
-                            column.type = VARCHAR(length=256,
-                                    convert_unicode=True, collation='utf8_bin')
                             
             metadata.create_all(ENGINE)
             MAPPED = True
@@ -148,14 +145,6 @@ def _make_default_parser():
 # A plain old word.
     plainWord = Group(wordtoken).setResultsName("Word")
 
-# A wildcard word containing * or ?.
-    wildchars = Word("?*")
-# Start with word chars and then have wild chars mixed in
-    wildmixed = wordtoken + OneOrMore(wildchars + Optional(wordtoken))
-# Or, start with wildchars, and then either a mixture of word and wild chars, or the next token
-    wildstart = wildchars + (OneOrMore(wordtoken + Optional(wildchars)) | FollowedBy(White() | StringEnd()))
-    wildcard = Group(Combine(wildmixed | wildstart)).setResultsName("Wildcard")
-
 # A range of terms
     startfence = Literal("[") | Literal("{")
     endfence = Literal("]") | Literal("}")
@@ -166,7 +155,7 @@ def _make_default_parser():
     range = Group(startfence + (normalrange | openstartrange | openendrange) + endfence).setResultsName("Range")
 
 # A word-like thing
-    generalWord = range | wildcard | plainWord
+    generalWord = range | plainWord
 
 # A quoted phrase
     quotedPhrase = Group(QuotedString('"')).setResultsName("Quotes")
@@ -242,10 +231,9 @@ class Producer(object):
                 expression = and_(sRevision.bag_name == bag,
                         sRevision.tiddler_title == title)
             elif fieldname == 'tag':
-                stag_alias = alias(tag_table)
-                expression = and_(
-                        stag_alias.c.revision_number == sRevision.number,
-                        stag_alias.c.tag == value)
+                # XXX: this is insufficiently specific
+                expression = sRevision.tags.op('regexp')('(^| {1})%s( {1}|$)'
+                        % value)
             elif hasattr(sRevision, fieldname):
                 if like:
                     expression = (getattr(sRevision, fieldname).like(value))
@@ -264,7 +252,7 @@ class Producer(object):
                             sfield_alias.c.value == value)
         else:
             expression = (text_(
-                'MATCH(revision.tiddler_title, revision.text) '
+                'MATCH(revision.tiddler_title, revision.text, revision.tags) '
                 + 'AGAINST(:query in boolean mode)')
                 .params(query=value))
         return expression 
