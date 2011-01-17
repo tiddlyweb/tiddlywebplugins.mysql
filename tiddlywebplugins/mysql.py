@@ -6,7 +6,6 @@ for accelerating filters.
 http://github.com/cdent/tiddlywebplugins.mysql
 http://tiddlyweb.com/
 
-ALPHA!
 """
 from __future__ import absolute_import
 
@@ -39,7 +38,7 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '0.9.9'
+__version__ = '0.9.10'
 
 ENGINE = None
 MAPPED = False
@@ -148,14 +147,6 @@ def _make_default_parser():
 # A plain old word.
     plainWord = Group(wordtoken).setResultsName("Word")
 
-# A wildcard word containing * or ?.
-    wildchars = Word("?*")
-# Start with word chars and then have wild chars mixed in
-    wildmixed = wordtoken + OneOrMore(wildchars + Optional(wordtoken))
-# Or, start with wildchars, and then either a mixture of word and wild chars, or the next token
-    wildstart = wildchars + (OneOrMore(wordtoken + Optional(wildchars)) | FollowedBy(White() | StringEnd()))
-    wildcard = Group(Combine(wildmixed | wildstart)).setResultsName("Wildcard")
-
 # A range of terms
     startfence = Literal("[") | Literal("{")
     endfence = Literal("]") | Literal("}")
@@ -166,7 +157,7 @@ def _make_default_parser():
     range = Group(startfence + (normalrange | openstartrange | openendrange) + endfence).setResultsName("Range")
 
 # A word-like thing
-    generalWord = range | wildcard | plainWord
+    generalWord = range | plainWord
 
 # A quoted phrase
     quotedPhrase = Group(QuotedString('"')).setResultsName("Quotes")
