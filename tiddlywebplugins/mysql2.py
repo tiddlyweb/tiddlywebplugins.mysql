@@ -123,7 +123,7 @@ class Store(SQLStore):
 
     def search(self, search_query=''):
         query = self.session.query(sRevision.bag_name, sRevision.tiddler_title)
-        query = query.distinct().join(sTiddler.current)
+        query = query.join(sTiddler.current)
         try:
             try:
                 ast = self.parser(search_query)[0]
