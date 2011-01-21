@@ -23,7 +23,7 @@ setup(
     packages = find_packages(exclude=['test']),
     install_requires = ['setuptools',
         'tiddlyweb',
-        'tiddlywebplugins.sqlalchemy>=2.0.0',
+        'tiddlywebplugins.sqlalchemy2>=2.0.0',
         'MySQL-python',
         'pyparsing',
         ],
