@@ -336,7 +336,7 @@ class Producer(object):
                 self.query = self.query.join((text_table,
                         (text_table.c.revision_number
                             == revision_table.c.number)))
-                self_joined_text = True
+                self.joined_text = True
             expression = (text_(
                 'MATCH(text.text) '
                 + 'AGAINST(:query in boolean mode)')
