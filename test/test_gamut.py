@@ -1,6 +1,41 @@
 
 import os
 
+def test_revisions_deletions():
+    tiddler = Tiddler('tone', 'pone')
+    tiddler.text = 'revision1'
+    tiddler.tags = ['1','2']
+    store.put(tiddler)
+    tiddler.text = 'revision2'
+    tiddler.tags = ['3','4']
+    store.put(tiddler)
+
+    revisions = store.list_tiddler_revisions(tiddler)
+
+    assert len(revisions) == 2
+
+    store.delete(tiddler)
+
+    py.test.raises(NoTiddlerError, 'store.list_tiddler_revisions(tiddler)')
+
+
+def test_bag_deletes_tiddlers():
+    tiddler = Tiddler('tone', 'pone')
+    store.put(tiddler)
+    tiddler = Tiddler('uone', 'pone')
+    store.put(tiddler)
+
+    bag = Bag('pone')
+
+    tiddlers = list(store.list_bag_tiddlers(bag))
+    assert len(tiddlers) == 2
+
+    store.delete(bag)
+
+    bag = Bag('pone')
+    py.test.raises(NoBagError, 'list(store.list_bag_tiddlers(bag))')
+    py.test.raises(NoTiddlerError, 'store.list_tiddler_revisions(tiddler)')
+
 import py.test
 
 from tiddlyweb.config import config
@@ -262,3 +297,128 @@ def xtest_case_sensitive():
     tiddlerd = Tiddler('testtiddler', 'testcs')
     tiddlerd = store.get(tiddlerd)
     assert tiddlerd.text == u'a'
+
+def test_2bag_policy():
+    bag = Bag(u'pone')
+    bag.policy.read = [u'cdent']
+    bag.policy.write = [u'cdent']
+    store.put(bag)
+
+    bag = Bag(u'ptwo')
+    bag.policy.read = [u'cdent', u'fnd']
+    bag.policy.write = [u'cdent']
+    store.put(bag)
+
+    pone = store.get(Bag(u'pone'))
+    ptwo = store.get(Bag(u'ptwo'))
+
+    assert pone.policy.read == [u'cdent']
+    assert pone.policy.write == [u'cdent']
+
+    assert sorted(ptwo.policy.read) == [u'cdent', u'fnd']
+    assert ptwo.policy.write == [u'cdent']
+
+    store.delete(pone)
+
+    ptwo = store.get(Bag(u'ptwo'))
+
+    assert sorted(ptwo.policy.read) == [u'cdent', u'fnd']
+    assert ptwo.policy.write == [u'cdent']
+
+    bag = Bag(u'pone')
+    bag.policy.read = [u'cdent']
+    bag.policy.write = [u'cdent']
+    store.put(bag)
+
+    pone = store.get(Bag(u'pone'))
+    assert pone.policy.read == [u'cdent']
+    assert pone.policy.write == [u'cdent']
+
+    pone.policy.read.append(u'fnd')
+
+    store.put(pone)
+
+    pone = store.get(Bag(u'pone'))
+
+    assert sorted(pone.policy.read) == [u'cdent', u'fnd']
+
+def test_2recipe_policy():
+    recipe = Recipe(u'pone')
+    recipe.policy.read = [u'cdent']
+    recipe.policy.write = [u'cdent']
+    store.put(recipe)
+
+    recipe = Recipe(u'ptwo')
+    recipe.policy.read = [u'cdent', u'fnd']
+    recipe.policy.write = [u'cdent']
+    store.put(recipe)
+
+    pone = store.get(Recipe(u'pone'))
+    ptwo = store.get(Recipe(u'ptwo'))
+
+    assert pone.policy.read == [u'cdent']
+    assert pone.policy.write == [u'cdent']
+
+    assert sorted(ptwo.policy.read) == [u'cdent', u'fnd']
+    assert ptwo.policy.write == [u'cdent']
+
+    store.delete(pone)
+
+    ptwo = store.get(Recipe(u'ptwo'))
+
+    assert sorted(ptwo.policy.read) == [u'cdent', u'fnd']
+    assert ptwo.policy.write == [u'cdent']
+
+    recipe = Recipe(u'pone')
+    recipe.policy.read = [u'cdent']
+    recipe.policy.write = [u'cdent']
+    store.put(recipe)
+
+    pone = store.get(Recipe(u'pone'))
+    assert pone.policy.read == [u'cdent']
+    assert pone.policy.write == [u'cdent']
+
+    pone.policy.read.append(u'fnd')
+
+    store.put(pone)
+
+    pone = store.get(Recipe(u'pone'))
+
+    assert sorted(pone.policy.read) == [u'cdent', u'fnd']
+
+def test_revisions_deletions():
+    tiddler = Tiddler(u'tone', u'pone')
+    tiddler.text = u'revision1'
+    tiddler.tags = [u'1', u'2']
+    store.put(tiddler)
+    tiddler.text = u'revision2'
+    tiddler.tags = [u'3', u'4']
+    store.put(tiddler)
+
+    revisions = store.list_tiddler_revisions(tiddler)
+
+    assert len(revisions) == 2
+
+    store.delete(tiddler)
+
+    py.test.raises(NoTiddlerError, 'store.list_tiddler_revisions(tiddler)')
+
+
+def test_bag_deletes_tiddlers():
+    tiddler = Tiddler(u'tone', u'pone')
+    tiddler.text = u''
+    store.put(tiddler)
+    tiddler = Tiddler(u'uone', u'pone')
+    tiddler.text = u''
+    store.put(tiddler)
+
+    bag = Bag(u'pone')
+
+    tiddlers = list(store.list_bag_tiddlers(bag))
+    assert len(tiddlers) == 2
+
+    store.delete(bag)
+
+    bag = Bag(u'pone')
+    py.test.raises(NoBagError, 'list(store.list_bag_tiddlers(bag))')
+    py.test.raises(NoTiddlerError, 'store.list_tiddler_revisions(tiddler)')
