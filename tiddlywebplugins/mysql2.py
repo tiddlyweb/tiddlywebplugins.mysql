@@ -40,7 +40,7 @@ import logging
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '2.0.3'
+__version__ = '2.0.4'
 
 ENGINE = None
 MAPPED = False
@@ -63,9 +63,9 @@ class LookLively(object):
                 dbapi_con.ping(False)
             except TypeError:
                 dbapi_con.ping()
-        except dbapi_con.OperationalError, ex:
-            if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
-                logging.warn('got mysql server has gone away: %s', ex)
+        except dbapi_con.OperationalError, exc:
+            if exc.args[0] in (2006, 2013, 2014, 2045, 2055):
+                logging.warn('got mysql server has gone away: %s', exc)
                 # caught by pool, which will retry with a new connection
                 raise exc.DisconnectionError()
             else:
