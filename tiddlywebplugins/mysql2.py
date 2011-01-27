@@ -204,7 +204,7 @@ def _make_default_parser():
 # should be searched in a particular field by prepending 'fn:', where fn is
 # the name of the field.
     fieldableUnit = parenthetical | boostedUnit | boostableUnit
-    fieldedUnit = Group(Word(alphanums + "_" + "-") + Suppress(':') + fieldableUnit).setResultsName("Field")
+    fieldedUnit = Group(Word(alphanums + "_" + "-" + ".") + Suppress(':') + fieldableUnit).setResultsName("Field")
 
 # Units of content
     unit = fieldedUnit | fieldableUnit

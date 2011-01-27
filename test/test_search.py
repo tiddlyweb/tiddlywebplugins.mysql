@@ -180,3 +180,27 @@ def test_search_arbitrarily_complex():
 
     tiddlers = list(store.search(QUERY))
     assert len(tiddlers) == 1
+
+def test_field_with_dot():
+    tiddler = Tiddler('geoplace', 'cdent_public')
+    tiddler.text = u'some place somewhere'
+    tiddler.fields[u'geo.lat'] = u'1.25'
+    tiddler.fields[u'geo.long'] = u'-45.243'
+    store.put(tiddler)
+
+    tiddlers = list(store.search(u'geo.lat:1.2*'))
+
+    assert len(tiddlers) == 1
+
+    tiddlers = list(store.search(u'geo.lat:"1.2*" AND geo.long:"-45.*"'))
+
+    assert len(tiddlers) == 1
+    
+    tiddlers = list(store.search(u'geo.lat:"1.3*" AND geo.long:"-46.*"'))
+
+    assert len(tiddlers) == 0
+
+    tiddlers = list(store.search(u'geo.lat:"1.2*" OR geo.long:"-46.*"'))
+
+    assert len(tiddlers) == 1
+
