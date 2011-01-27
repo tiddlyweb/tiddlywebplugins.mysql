@@ -10,7 +10,7 @@ http://tiddlyweb.com/
 from __future__ import absolute_import
 
 from sqlalchemy.engine import create_engine
-from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.exc import ProgrammingError, DisconnectionError
 from sqlalchemy.sql.expression import (and_, or_, text as text_, alias,
         join as join_)
 from sqlalchemy.sql import func
@@ -40,7 +40,7 @@ import logging
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '2.0.4'
+__version__ = '2.0.5'
 
 ENGINE = None
 MAPPED = False
@@ -63,11 +63,11 @@ class LookLively(object):
                 dbapi_con.ping(False)
             except TypeError:
                 dbapi_con.ping()
-        except dbapi_con.OperationalError, exc:
-            if exc.args[0] in (2006, 2013, 2014, 2045, 2055):
-                logging.warn('got mysql server has gone away: %s', exc)
+        except dbapi_con.OperationalError, ex:
+            if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
+                logging.warn('got mysql server has gone away: %s', ex)
                 # caught by pool, which will retry with a new connection
-                raise exc.DisconnectionError()
+                raise DisconnectionError()
             else:
                 raise 
 
