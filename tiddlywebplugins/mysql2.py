@@ -12,7 +12,7 @@ from __future__ import absolute_import
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError, DisconnectionError
 from sqlalchemy.sql.expression import (and_, or_, text as text_, alias,
-        join as join_)
+        join as join_, label)
 from sqlalchemy.sql import func
 
 from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
@@ -293,6 +293,47 @@ class Producer(object):
                             expression = (tag_table.c.tag.like(value))
                         else:
                             expression = (tag_table.c.tag == value)
+            elif fieldname == 'near':
+                # proximity search on geo.long, geo.lat based on
+                # http://cdent.tiddlyspace.com/bags/cdent_public/tiddlers/Proximity%20Search.html
+                try:
+                    long, lat, radius = value.split(',', 2)
+                except ValueError:
+                    raise StoreError(
+                            'failed to parse search query, malformed near: %s'
+                            % exc)
+                field_alias1 = alias(field_table)
+                field_alias2 = alias(field_table)
+                distance = label(u'greatcircle', ( 6371000
+                    * func.acos(
+                        func.cos(
+                            func.radians(long)
+                            )
+                        * func.cos(
+                            func.radians(field_alias2.c.value)
+                            )
+                        * func.cos(
+                            func.radians(field_alias1.c.value)
+                            - func.radians(lat)
+                            )
+                        + func.sin(
+                            func.radians(long)
+                            )
+                        * func.sin(
+                            func.radians(field_alias2.c.value)
+                            )
+                        )
+                    ))
+                self.query = self.query.add_columns(distance)
+                self.query = self.query.join((field_alias1,
+                        (field_alias1.c.revision_number
+                            == revision_table.c.number)))
+                self.query = self.query.join((field_alias2,
+                        (field_alias2.c.revision_number
+                            == revision_table.c.number)))
+                self.query = self.query.having(u'greatcircle < %s' % radius)
+                expression = and_(field_alias1.c.name == u'geo.long',
+                        field_alias2.c.name == u'geo.lat')
             elif hasattr(sRevision, fieldname):
                 if like:
                     expression = (getattr(sRevision, fieldname).like(value))
