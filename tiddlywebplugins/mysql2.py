@@ -11,7 +11,7 @@ from __future__ import absolute_import
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError, DisconnectionError
-from sqlalchemy.sql.expression import (and_, or_, text as text_, alias,
+from sqlalchemy.sql.expression import (asc, and_, or_, text as text_, alias,
         join as join_, label)
 from sqlalchemy.sql import func
 
@@ -238,8 +238,12 @@ class Producer(object):
         self.in_and = False
         self.in_or = False
         self.query = query
+        self.limit = None
         expressions = self._eval(ast, None) 
-        return self.query.filter(expressions)
+        if self.limit:
+            return self.query.filter(expressions).limit(self.limit)
+        else:
+            return self.query.filter(expressions)
 
     def _eval(self, node, fieldname):
         name = node.getName()
@@ -297,7 +301,7 @@ class Producer(object):
                 # proximity search on geo.long, geo.lat based on
                 # http://cdent.tiddlyspace.com/bags/cdent_public/tiddlers/Proximity%20Search.html
                 try:
-                    long, lat, radius = value.split(',', 2)
+                    lat, long, radius = value.split(',', 2)
                 except ValueError:
                     raise StoreError(
                             'failed to parse search query, malformed near: %s'
@@ -307,17 +311,17 @@ class Producer(object):
                 distance = label(u'greatcircle', ( 6371000
                     * func.acos(
                         func.cos(
-                            func.radians(long)
+                            func.radians(lat)
                             )
                         * func.cos(
                             func.radians(field_alias2.c.value)
                             )
                         * func.cos(
                             func.radians(field_alias1.c.value)
-                            - func.radians(lat)
+                            - func.radians(long)
                             )
                         + func.sin(
-                            func.radians(long)
+                            func.radians(lat)
                             )
                         * func.sin(
                             func.radians(field_alias2.c.value)
@@ -331,9 +335,10 @@ class Producer(object):
                 self.query = self.query.join((field_alias2,
                         (field_alias2.c.revision_number
                             == revision_table.c.number)))
-                self.query = self.query.having(u'greatcircle < %s' % radius)
+                self.query = self.query.having(u'greatcircle < %s' % radius).order_by('greatcircle')
                 expression = and_(field_alias1.c.name == u'geo.long',
                         field_alias2.c.name == u'geo.lat')
+                self.limit = 20 # XXX: make this passable
             elif hasattr(sRevision, fieldname):
                 if like:
                     expression = (getattr(sRevision, fieldname).like(value))
