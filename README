@@ -1,8 +1,11 @@
 A plugin for TiddlyWeb subclassing tiddlywebplugins.sqlalchemy2 with mysql specifics.
 
-The main additions here are two:
+The main additions are:
 
 * Provide a reasonable search interface using mysql's fulltext.
+* Provide field based searches of tiddler attributes and fields.
+* Support finding tiddlers that have geo.lat and geo.long fields
+  near a location.
 * Provide an index_query method to allow the plugin to be used as
   an 'indexer' for filters and determine_bag_for_tiddler.
 
