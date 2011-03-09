@@ -302,7 +302,7 @@ class Producer(object):
                 # http://cdent.tiddlyspace.com/bags/cdent_public/tiddlers/Proximity%20Search.html
                 try:
                     lat, long, radius = value.split(',', 2)
-                except ValueError:
+                except ValueError, exc:
                     raise StoreError(
                             'failed to parse search query, malformed near: %s'
                             % exc)
