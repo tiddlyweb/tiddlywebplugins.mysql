@@ -207,21 +207,15 @@ def _make_default_parser():
     fieldedUnit = Group(Word(alphanums + "_" + "-" + ".") + Suppress(':') + fieldableUnit).setResultsName("Field")
 
 # Units of content
-    unit = fieldedUnit | fieldableUnit
-
-# A unit may be "not"-ed.
-    operatorNot = Group(Suppress(Keyword("not", caseless=True)) + Suppress(White()) + unit).setResultsName("Not")
-    generalUnit = operatorNot | unit
+    generalUnit = fieldedUnit | fieldableUnit
 
     andToken = Keyword("AND", caseless=False)
     orToken = Keyword("OR", caseless=False)
-    andNotToken = Keyword("ANDNOT", caseless=False)
 
     operatorAnd = Group(generalUnit + OneOrMore(Suppress(White()) + Suppress(andToken) + Suppress(White()) + generalUnit)).setResultsName("And")
     operatorOr = Group(generalUnit + OneOrMore(Suppress(White()) + Suppress(orToken) + Suppress(White()) + generalUnit)).setResultsName("Or")
-    operatorAndNot = Group(unit + OneOrMore(Suppress(White()) + Suppress(andNotToken) + Suppress(White()) + unit)).setResultsName("AndNot")
 
-    expression << (OneOrMore(operatorAnd | operatorOr | operatorAndNot | generalUnit | Suppress(White())) | Empty())
+    expression << (OneOrMore(operatorAnd | operatorOr | generalUnit | Suppress(White())) | Empty())
 
     toplevel = Group(expression).setResultsName("Toplevel") + StringEnd()
 
