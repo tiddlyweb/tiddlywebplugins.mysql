@@ -40,7 +40,7 @@ import logging
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '2.0.7'
+__version__ = '2.0.8'
 
 ENGINE = None
 MAPPED = False
@@ -296,7 +296,7 @@ class Producer(object):
                 # http://cdent.tiddlyspace.com/bags/cdent_public/tiddlers/Proximity%20Search.html
                 try:
                     lat, long, radius = value.split(',', 2)
-                except ValueError:
+                except ValueError, exc:
                     raise StoreError(
                             'failed to parse search query, malformed near: %s'
                             % exc)
