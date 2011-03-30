@@ -40,7 +40,7 @@ import logging
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '2.1.0'
+__version__ = '2.1.1'
 
 ENGINE = None
 MAPPED = False
@@ -338,7 +338,8 @@ class Producer(object):
                     self.limit = int(value)
                 except ValueError:
                     pass
-                self.query = self.query.order_by(revision_table.c.modified)
+                self.query = self.query.order_by(
+                        revision_table.c.modified.desc())
                 expression = None
             elif hasattr(sRevision, fieldname):
                 if like:
