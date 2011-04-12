@@ -204,3 +204,12 @@ def test_field_with_dot():
 
     assert len(tiddlers) == 1
 
+def test_limited_search():
+    tiddlers = list(store.search(u'starts _limit:1'))
+    assert len(tiddlers) == 1, tiddlers
+
+    tiddlers = list(store.search(u'starts'))
+    assert len(tiddlers) != 1, tiddlers
+
+    tiddlers = list(store.search(u'starts _limit:so'))
+    assert len(tiddlers) != 1, tiddlers

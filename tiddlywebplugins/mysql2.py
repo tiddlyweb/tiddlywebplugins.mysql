@@ -41,7 +41,7 @@ import logging
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '2.1.0'
+__version__ = '2.1.2'
 
 ENGINE = None
 MAPPED = False
@@ -374,7 +374,15 @@ class Producer(object):
                         u'greatcircle < %s' % radius).order_by('greatcircle')
                 expression = and_(field_alias1.c.name == u'geo.long',
                         field_alias2.c.name == u'geo.lat')
-                self.limit = 20  # XXX: make this passable
+                self.limit = 20 # XXX: make this passable
+            elif fieldname == '_limit':
+                try:
+                    self.limit = int(value)
+                except ValueError:
+                    pass
+                self.query = self.query.order_by(
+                        revision_table.c.modified.desc())
+                expression = None
             elif hasattr(sRevision, fieldname):
                 if like:
                     expression = (getattr(sRevision, fieldname).like(value))
