@@ -11,6 +11,7 @@ from __future__ import absolute_import
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError, DisconnectionError
+from sqlalchemy.orm.exc import NoResultFound, StaleDataError
 from sqlalchemy.sql.expression import (and_, or_, text as text_, alias,
         label)
 from sqlalchemy.sql import func
@@ -19,7 +20,7 @@ from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
 
 from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.serializer import Serializer
-from tiddlyweb.store import StoreError
+from tiddlyweb.store import StoreError, NoTiddlerError
 
 from tiddlywebplugins.sqlalchemy2 import (Store as SQLStore,
         sTiddler, sRevision, metadata, Session,
@@ -139,6 +140,39 @@ class Store(SQLStore):
                 self.session.close()
             except ProgrammingError, exc:
                 raise StoreError('generated search SQL incorrect: %s' % exc)
+        except:
+            self.session.rollback()
+            raise
+
+    def tiddler_delete(self, tiddler):
+        """
+        Override sqlalchemy's tiddler delete to deal with a rare
+        problem that happens because of MyISAM's lack of transaction
+        support. It is possible for a DELETE to happen concurrently,
+        or to leave behind stale data. This tries to trap that 
+        occurance and ride over it smoothly while leaving the data
+        in an acceptable state.
+        """
+        try:
+            try:
+                stiddlers = (self.session.query(sTiddler).
+                        filter(sTiddler.title == tiddler.title).
+                        filter(sTiddler.bag_name == tiddler.bag))
+                rows = self.session.delete(stiddlers.one())
+                if rows == 0:
+                    raise NoResultFound
+                self.session.commit()
+            except NoResultFound, exc:
+                raise NoTiddlerError('no tiddler %s to delete, %s' %
+                        (tiddler.title, exc))
+        except StaleDataError, exc:
+            logging.warn('stale data during delete of %s:%s, %s',
+                    tiddler.title, tiddler.bag, exc)
+            self.session.rollback()
+            try:
+                self.tiddler_delete(tiddler)
+            except NoTiddlerError:
+                pass
         except:
             self.session.rollback()
             raise
