@@ -11,8 +11,8 @@ from __future__ import absolute_import
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError, DisconnectionError
-from sqlalchemy.sql.expression import (asc, and_, or_, text as text_, alias,
-        join as join_, label)
+from sqlalchemy.sql.expression import (and_, or_, text as text_, alias,
+        label)
 from sqlalchemy.sql import func
 
 from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
@@ -22,14 +22,14 @@ from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError
 
 from tiddlywebplugins.sqlalchemy2 import (Store as SQLStore,
-        sTiddler, sRevision, sTag, metadata, Session,
+        sTiddler, sRevision, metadata, Session,
         field_table, tiddler_table, revision_table, bag_table, text_table,
         policy_table, recipe_table, role_table, user_table, tag_table)
 
 from tiddlyweb.filters import FilterIndexRefused
 
 from pyparsing import (printables, alphanums, OneOrMore, Group,
-        Combine, Suppress, Optional, FollowedBy, Literal, CharsNotIn,
+        Combine, Suppress, Literal, CharsNotIn,
         Word, Keyword, Empty, White, Forward, QuotedString, StringEnd,
         ParseException)
 
@@ -55,9 +55,9 @@ class LookLively(object):
 
     Borrowed from:
     http://groups.google.com/group/sqlalchemy/msg/a4ce563d802c929f
-    """ 
+    """
 
-    def checkout(self, dbapi_con, con_record, con_proxy): 
+    def checkout(self, dbapi_con, con_record, con_proxy):
         try:
             try:
                 dbapi_con.ping(False)
@@ -69,7 +69,7 @@ class LookLively(object):
                 # caught by pool, which will retry with a new connection
                 raise DisconnectionError()
             else:
-                raise 
+                raise
 
 
 class Store(SQLStore):
@@ -104,6 +104,7 @@ class Store(SQLStore):
                             column.type = VARCHAR(length=128,
                                     convert_unicode=True, collation='utf8_bin')
                 if table.name == 'text':
+                    for column in table.columns:
                         if column.name == 'text':
                             column.type = LONGTEXT(convert_unicode=True,
                                     collation='utf8_bin')
@@ -117,10 +118,9 @@ class Store(SQLStore):
                         if column.name == 'value':
                             column.type = VARCHAR(length=256,
                                     convert_unicode=True, collation='utf8_bin')
-                            
+
             metadata.create_all(ENGINE)
             MAPPED = True
-
 
     def search(self, search_query=''):
         query = self.session.query(sRevision.bag_name, sRevision.tiddler_title)
@@ -151,13 +151,13 @@ def index_query(environ, **kwargs):
     for key, value in kwargs.items():
         if '"' in value:
             # XXX The current parser is currently unable to deal with
-            # nested quotes. Rather than running the risk of tweaking 
+            # nested quotes. Rather than running the risk of tweaking
             # the parser with unclear results, we instead just refuse
             # for now. Later this can be fixed for real.
             raise FilterIndexRefused('unable to process values with quotes')
         queries.append('%s:"%s"' % (key, value))
     query = ' '.join(queries)
-    
+
     storage = store.storage
 
     try:
@@ -172,7 +172,8 @@ def _make_default_parser():
     escapechar = "\\"
 
     wordtext = CharsNotIn('\\():"{}[] ')
-    escape = Suppress(escapechar) + (Word(printables, exact=1) | White(exact=1))
+    escape = Suppress(escapechar) + (Word(printables, exact=1)
+            | White(exact=1))
     wordtoken = Combine(OneOrMore(wordtext | escape))
 # A plain old word.
     plainWord = Group(wordtoken).setResultsName("Word")
@@ -181,10 +182,14 @@ def _make_default_parser():
     startfence = Literal("[") | Literal("{")
     endfence = Literal("]") | Literal("}")
     rangeitem = QuotedString('"') | wordtoken
-    openstartrange = Group(Empty()) + Suppress(Keyword("TO") + White()) + Group(rangeitem)
-    openendrange = Group(rangeitem) + Suppress(White() + Keyword("TO")) + Group(Empty())
-    normalrange = Group(rangeitem) + Suppress(White() + Keyword("TO") + White()) + Group(rangeitem)
-    range = Group(startfence + (normalrange | openstartrange | openendrange) + endfence).setResultsName("Range")
+    openstartrange = Group(Empty()) + Suppress(Keyword("TO")
+            + White()) + Group(rangeitem)
+    openendrange = Group(rangeitem) + Suppress(White()
+            + Keyword("TO")) + Group(Empty())
+    normalrange = Group(rangeitem) + Suppress(White()
+            + Keyword("TO") + White()) + Group(rangeitem)
+    range = Group(startfence + (normalrange | openstartrange
+        | openendrange) + endfence).setResultsName("Range")
 
 # A word-like thing
     generalWord = range | plainWord
@@ -195,16 +200,19 @@ def _make_default_parser():
     expression = Forward()
 
 # Parentheses can enclose (group) any expression
-    parenthetical = Group((Suppress("(") + expression + Suppress(")"))).setResultsName("Group")
+    parenthetical = Group((Suppress("(") + expression
+        + Suppress(")"))).setResultsName("Group")
 
     boostableUnit = generalWord | quotedPhrase
-    boostedUnit = Group(boostableUnit + Suppress("^") + Word("0123456789", ".0123456789")).setResultsName("Boost")
+    boostedUnit = Group(boostableUnit + Suppress("^")
+            + Word("0123456789", ".0123456789")).setResultsName("Boost")
 
 # The user can flag that a parenthetical group, quoted phrase, or word
 # should be searched in a particular field by prepending 'fn:', where fn is
 # the name of the field.
     fieldableUnit = parenthetical | boostedUnit | boostableUnit
-    fieldedUnit = Group(Word(alphanums + "_" + "-" + ".") + Suppress(':') + fieldableUnit).setResultsName("Field")
+    fieldedUnit = Group(Word(alphanums + "_" + "-"
+        + ".") + Suppress(':') + fieldableUnit).setResultsName("Field")
 
 # Units of content
     generalUnit = fieldedUnit | fieldableUnit
@@ -212,16 +220,22 @@ def _make_default_parser():
     andToken = Keyword("AND", caseless=False)
     orToken = Keyword("OR", caseless=False)
 
-    operatorAnd = Group(generalUnit + OneOrMore(Suppress(White()) + Suppress(andToken) + Suppress(White()) + generalUnit)).setResultsName("And")
-    operatorOr = Group(generalUnit + OneOrMore(Suppress(White()) + Suppress(orToken) + Suppress(White()) + generalUnit)).setResultsName("Or")
+    operatorAnd = Group(generalUnit + OneOrMore(
+        Suppress(White()) + Suppress(andToken) + Suppress(White())
+        + generalUnit)).setResultsName("And")
+    operatorOr = Group(generalUnit + OneOrMore(
+        Suppress(White()) + Suppress(orToken) + Suppress(White())
+        + generalUnit)).setResultsName("Or")
 
-    expression << (OneOrMore(operatorAnd | operatorOr | generalUnit | Suppress(White())) | Empty())
+    expression << (OneOrMore(operatorAnd | operatorOr
+        | generalUnit | Suppress(White())) | Empty())
 
     toplevel = Group(expression).setResultsName("Toplevel") + StringEnd()
 
     return toplevel.parseString
 
 DEFAULT_PARSER = _make_default_parser()
+
 
 class Producer(object):
 
@@ -233,7 +247,7 @@ class Producer(object):
         self.in_or = False
         self.query = query
         self.limit = None
-        expressions = self._eval(ast, None) 
+        expressions = self._eval(ast, None)
         if self.limit:
             return self.query.filter(expressions).limit(self.limit)
         else:
@@ -245,7 +259,7 @@ class Producer(object):
 
     def _Toplevel(self, node, fieldname):
         expressions = []
-        for subnode in node: 
+        for subnode in node:
             expressions.append(self._eval(subnode, fieldname))
         return and_(*expressions)
 
@@ -302,26 +316,19 @@ class Producer(object):
                             % exc)
                 field_alias1 = alias(field_table)
                 field_alias2 = alias(field_table)
-                distance = label(u'greatcircle', ( 6371000
+                distance = label(u'greatcircle', (6371000
                     * func.acos(
                         func.cos(
-                            func.radians(lat)
-                            )
+                            func.radians(lat))
                         * func.cos(
-                            func.radians(field_alias2.c.value)
-                            )
+                            func.radians(field_alias2.c.value))
                         * func.cos(
                             func.radians(field_alias1.c.value)
-                            - func.radians(long)
-                            )
+                            - func.radians(long))
                         + func.sin(
-                            func.radians(lat)
-                            )
+                            func.radians(lat))
                         * func.sin(
-                            func.radians(field_alias2.c.value)
-                            )
-                        )
-                    ))
+                            func.radians(field_alias2.c.value)))))
                 self.query = self.query.add_columns(distance)
                 self.query = self.query.join((field_alias1,
                         (field_alias1.c.revision_number
@@ -329,10 +336,11 @@ class Producer(object):
                 self.query = self.query.join((field_alias2,
                         (field_alias2.c.revision_number
                             == revision_table.c.number)))
-                self.query = self.query.having(u'greatcircle < %s' % radius).order_by('greatcircle')
+                self.query = self.query.having(
+                        u'greatcircle < %s' % radius).order_by('greatcircle')
                 expression = and_(field_alias1.c.name == u'geo.long',
                         field_alias2.c.name == u'geo.lat')
-                self.limit = 20 # XXX: make this passable
+                self.limit = 20  # XXX: make this passable
             elif hasattr(sRevision, fieldname):
                 if like:
                     expression = (getattr(sRevision, fieldname).like(value))
@@ -382,21 +390,21 @@ class Producer(object):
                 'MATCH(text.text) '
                 + 'AGAINST(:query in boolean mode)')
                 .params(query=value))
-        return expression 
+        return expression
 
     def _Field(self, node, fieldname):
         return self._Word(node[1], node[0])
 
     def _Group(self, node, fieldname):
         expressions = []
-        for subnode in node: 
+        for subnode in node:
             expressions.append(self._eval(subnode, fieldname))
         return and_(*expressions)
 
     def _Or(self, node, fieldname):
         expressions = []
         self.in_or = True
-        for subnode in node: 
+        for subnode in node:
             expressions.append(self._eval(subnode, fieldname))
         self.in_or = False
         return or_(*expressions)
@@ -404,7 +412,7 @@ class Producer(object):
     def _And(self, node, fieldname):
         expressions = []
         self.in_and = True
-        for subnode in node: 
+        for subnode in node:
             expressions.append(self._eval(subnode, fieldname))
         self.in_and = False
         return and_(*expressions)
