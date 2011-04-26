@@ -213,3 +213,32 @@ def test_limited_search():
 
     tiddlers = list(store.search(u'starts _limit:so'))
     assert len(tiddlers) != 1, tiddlers
+
+def test_modified():
+    tiddler = Tiddler('GettingStarted', 'fnd_public')
+    tiddler.modifier = u'fnd';
+    store.put(tiddler)
+
+    tiddlers = list(store.search(u'modifier:fnd'))
+
+    assert len(tiddlers) == 1
+
+    tiddler = Tiddler('GettingStarted', 'fnd_public')
+    tiddler.modifier = u'cdent';
+    store.put(tiddler)
+
+    tiddlers = list(store.search(u'modifier:fnd'))
+
+    assert len(tiddlers) == 0
+
+    tiddler = Tiddler('GettingFancy', 'fnd_public')
+    tiddler.modifier = u'fnd';
+    store.put(tiddler)
+
+    tiddlers = list(store.search(u'modifier:fnd OR modifier:cdent'))
+
+    assert len(tiddlers) == 2
+
+    tiddlers = list(store.search(u'modifier:fnd AND modified:20*'))
+
+    assert len(tiddlers) == 1

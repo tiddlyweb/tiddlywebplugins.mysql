@@ -124,8 +124,7 @@ class Store(SQLStore):
             MAPPED = True
 
     def search(self, search_query=''):
-        query = self.session.query(sRevision.bag_name, sRevision.tiddler_title)
-        query = query.join(sTiddler.current)
+        query = self.session.query(sTiddler.bag_name, sTiddler.title)
         try:
             try:
                 ast = self.parser(search_query)[0]
@@ -135,7 +134,7 @@ class Store(SQLStore):
 
             try:
                 for stiddler in query.all():
-                    yield Tiddler(unicode(stiddler.tiddler_title),
+                    yield Tiddler(unicode(stiddler.title),
                             unicode(stiddler.bag_name))
                 self.session.close()
             except ProgrammingError, exc:
@@ -274,6 +273,7 @@ DEFAULT_PARSER = _make_default_parser()
 class Producer(object):
 
     def produce(self, ast, query):
+        self.joined_revision = False
         self.joined_tags = False
         self.joined_fields = False
         self.joined_text = False
@@ -305,21 +305,25 @@ class Producer(object):
                 value = value.replace('*', '%')
                 like = True
 
-            if fieldname == 'ftitle' or fieldname == 'title':
-                fieldname = 'tiddler_title'
-            if fieldname == 'fbag' or fieldname == 'bag':
-                fieldname = 'bag_name'
+            if fieldname == 'ftitle':
+                fieldname = 'title'
+            if fieldname == 'fbag':
+                fieldname == 'bag'
 
-            if fieldname == 'id':
+            if fieldname == 'bag':
+                expression = (sTiddler.bag_name == value)
+            elif fieldname == 'title':
+                expression = (sTiddler.title == value)
+            elif fieldname == 'id':
                 bag, title = value.split(':', 1)
-                expression = and_(sRevision.bag_name == bag,
-                        sRevision.tiddler_title == title)
+                expression = and_(sTiddler.bag_name == bag,
+                        sTiddler.title == title)
             elif fieldname == 'tag':
                 if self.in_and:
                     tag_alias = alias(tag_table)
                     self.query = self.query.join((tag_alias,
                             (tag_alias.c.revision_number
-                                == revision_table.c.number)))
+                                == tiddler_table.c.revision_number)))
                     if like:
                         expression = (tag_alias.c.tag.like(value))
                     else:
@@ -328,7 +332,7 @@ class Producer(object):
                     if not self.joined_tags:
                         self.query = self.query.join((tag_table,
                                 (tag_table.c.revision_number
-                                    == revision_table.c.number)))
+                                    == tiddler_table.c.revision_number)))
                         if like:
                             expression = (tag_table.c.tag.like(value))
                         else:
@@ -366,10 +370,10 @@ class Producer(object):
                 self.query = self.query.add_columns(distance)
                 self.query = self.query.join((field_alias1,
                         (field_alias1.c.revision_number
-                            == revision_table.c.number)))
+                            == tiddler_table.c.revision_number)))
                 self.query = self.query.join((field_alias2,
                         (field_alias2.c.revision_number
-                            == revision_table.c.number)))
+                            == tiddler_table.c.revision_number)))
                 self.query = self.query.having(
                         u'greatcircle < %s' % radius).order_by('greatcircle')
                 expression = and_(field_alias1.c.name == u'geo.long',
@@ -381,19 +385,45 @@ class Producer(object):
                 except ValueError:
                     pass
                 self.query = self.query.order_by(
-                        revision_table.c.modified.desc())
+                        tiddler_table.c.revision_number.desc())
                 expression = None
             elif hasattr(sRevision, fieldname):
-                if like:
-                    expression = (getattr(sRevision, fieldname).like(value))
+                if self.in_and:
+                    revision_alias = alias(revision_table)
+                    self.query = self.query.join((revision_alias,
+                        (revision_alias.c.number
+                            == tiddler_table.c.revision_number)))
+                    if like:
+                        expression = (getattr(revision_alias.c,
+                            fieldname).like(value))
+                    else:
+                        expression = (getattr(revision_alias.c,
+                            fieldname) == value)
                 else:
-                    expression = (getattr(sRevision, fieldname) == value)
+                    if not self.joined_revision:
+                        self.query = self.query.join((revision_table,
+                            (revision_table.c.number
+                                == tiddler_table.c.revision_number)))
+                        if like:
+                            expression = (getattr(sRevision,
+                                fieldname).like(value))
+                        else:
+                            expression = (getattr(sRevision,
+                                fieldname) == value)
+                        self.joined_revision = True
+                    else:
+                        if like:
+                            expression = (getattr(sRevision,
+                                fieldname).like(value))
+                        else:
+                            expression = (getattr(sRevision,
+                                fieldname) == value)
             else:
                 if self.in_and:
                     field_alias = alias(field_table)
                     self.query = self.query.join((field_alias,
                             (field_alias.c.revision_number
-                                == revision_table.c.number)))
+                                == tiddler_table.c.revision_number)))
                     expression = (field_alias.c.name == fieldname)
                     if like:
                         expression = and_(expression,
@@ -405,7 +435,7 @@ class Producer(object):
                     if not self.joined_fields:
                         self.query = self.query.join((field_table,
                                 (field_table.c.revision_number
-                                    == revision_table.c.number)))
+                                    == tiddler_table.c.revision_number)))
                         expression = (field_table.c.name == fieldname)
                         if like:
                             expression = and_(expression,
@@ -426,7 +456,7 @@ class Producer(object):
             if not self.joined_text:
                 self.query = self.query.join((text_table,
                         (text_table.c.revision_number
-                            == revision_table.c.number)))
+                            == tiddler_table.c.revision_number)))
                 self.joined_text = True
             expression = (text_(
                 'MATCH(text.text) '
