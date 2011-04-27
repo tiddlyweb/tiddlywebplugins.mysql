@@ -308,12 +308,18 @@ class Producer(object):
             if fieldname == 'ftitle':
                 fieldname = 'title'
             if fieldname == 'fbag':
-                fieldname == 'bag'
+                fieldname = 'bag'
 
             if fieldname == 'bag':
-                expression = (sTiddler.bag_name == value)
+                if like:
+                    expression = (sTiddler.bag_name.like(value))
+                else:
+                    expression = (sTiddler.bag_name == value)
             elif fieldname == 'title':
-                expression = (sTiddler.title == value)
+                if like:
+                    expression = (sTiddler.title.like(value))
+                else:
+                    expression = (sTiddler.title == value)
             elif fieldname == 'id':
                 bag, title = value.split(':', 1)
                 expression = and_(sTiddler.bag_name == bag,
