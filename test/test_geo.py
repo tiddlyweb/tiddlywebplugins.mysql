@@ -59,6 +59,8 @@ def test_geo_search_not_find():
 def test_geo_bad_input():
     py.test.raises(StoreError,
             'list(store.search(u"near:60,-60,select barney from users"))')
+    py.test.raises(StoreError,
+            'list(store.search(u"near:60,-60,3km"))')
 
 def test_find_toilet():
     tiddlers = list(store.search(u'near:10,-10,100000 tag:toilet'))

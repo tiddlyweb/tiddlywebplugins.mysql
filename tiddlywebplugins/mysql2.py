@@ -353,7 +353,8 @@ class Producer(object):
                 # proximity search on geo.long, geo.lat based on
                 # http://cdent.tiddlyspace.com/bags/cdent_public/tiddlers/Proximity%20Search.html
                 try:
-                    lat, long, radius = value.split(',', 2)
+                    lat, long, radius = [int(item)
+                            for item in value.split(',', 2)]
                 except ValueError, exc:
                     raise StoreError(
                             'failed to parse search query, malformed near: %s'
