@@ -472,8 +472,7 @@ class Producer(object):
                 self.joined_text = True
             expression = (text_(
                 'MATCH(text.text) '
-                + 'AGAINST(:query in boolean mode)')
-                .params(query=value))
+                + "AGAINST('%s' in boolean mode)" % value))
         return expression
 
     def _Field(self, node, fieldname):
