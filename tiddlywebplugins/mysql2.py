@@ -125,6 +125,11 @@ class Store(SQLStore):
 
     def search(self, search_query=''):
         query = self.session.query(sTiddler.bag_name, sTiddler.title)
+        if '_limit:' not in search_query:
+            default_limit = self.environ.get(
+                    'tiddlyweb.config', {}).get(
+                            'mysql.search_limit', '20')
+            search_query += ' _limit:%s' % default_limit
         try:
             try:
                 ast = self.parser(search_query)[0]
