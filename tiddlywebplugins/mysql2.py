@@ -358,7 +358,7 @@ class Producer(object):
                 # proximity search on geo.long, geo.lat based on
                 # http://cdent.tiddlyspace.com/bags/cdent_public/tiddlers/Proximity%20Search.html
                 try:
-                    lat, long, radius = [int(item)
+                    lat, long, radius = [float(item)
                             for item in value.split(',', 2)]
                 except ValueError, exc:
                     raise StoreError(
