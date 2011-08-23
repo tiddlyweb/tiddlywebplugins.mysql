@@ -36,12 +36,12 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 
 import logging
 
-logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+#logging.basicConfig()
+#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '2.1.8'
+__version__ = '2.1.9'
 
 ENGINE = None
 MAPPED = False
