@@ -12,7 +12,7 @@ from __future__ import absolute_import
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError, DisconnectionError
 from sqlalchemy.orm.exc import NoResultFound, StaleDataError
-from sqlalchemy.sql.expression import (and_, or_, text as text_, alias,
+from sqlalchemy.sql.expression import (and_, or_, not_, text as text_, alias,
         label)
 from sqlalchemy.sql import func
 
@@ -36,8 +36,8 @@ from pyparsing import (printables, alphanums, OneOrMore, Group,
 
 import logging
 
-#logging.basicConfig()
-#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
@@ -257,6 +257,7 @@ def _make_default_parser():
 
     andToken = Keyword("AND", caseless=False)
     orToken = Keyword("OR", caseless=False)
+    notToken = Keyword("NOT", caseless=False)
 
     operatorAnd = Group(generalUnit + OneOrMore(
         Suppress(White()) + Suppress(andToken) + Suppress(White())
@@ -264,8 +265,10 @@ def _make_default_parser():
     operatorOr = Group(generalUnit + OneOrMore(
         Suppress(White()) + Suppress(orToken) + Suppress(White())
         + generalUnit)).setResultsName("Or")
+    operatorNot = Group(Suppress(notToken) + Suppress(White()) +
+        generalUnit).setResultsName("Not")
 
-    expression << (OneOrMore(operatorAnd | operatorOr
+    expression << (OneOrMore(operatorAnd | operatorOr | operatorNot
         | generalUnit | Suppress(White())) | Empty())
 
     toplevel = Group(expression).setResultsName("Toplevel") + StringEnd()
@@ -284,6 +287,7 @@ class Producer(object):
         self.joined_text = False
         self.in_and = False
         self.in_or = False
+        self.in_not = False
         self.query = query
         self.limit = None
         expressions = self._eval(ast, None)
@@ -499,6 +503,14 @@ class Producer(object):
             expressions.append(self._eval(subnode, fieldname))
         self.in_and = False
         return and_(*expressions)
+
+    def _Not(self, node, fieldname):
+        expressions = []
+        self.in_not = True
+        for subnode in node:
+            expressions.append(self._eval(subnode, fieldname))
+        self.in_not = False
+        return not_(*expressions)
 
     def _Quotes(self, node, fieldname):
         node[0] = '"%s"' % node[0]

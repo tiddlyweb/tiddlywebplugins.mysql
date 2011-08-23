@@ -239,6 +239,14 @@ def test_modified():
 
     assert len(tiddlers) == 2
 
+    tiddlers = list(store.search(u'modifier:fnd NOT modifier:cdent'))
+
+    assert len(tiddlers) == 1
+
+    tiddlers = list(store.search(u'modifier:fnd NOT (modifier:cdent OR title:GettingStarted)'))
+
+    assert len(tiddlers) == 1
+
     tiddlers = list(store.search(u'modifier:fnd AND modified:20*'))
 
     assert len(tiddlers) == 1
