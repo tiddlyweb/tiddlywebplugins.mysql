@@ -9,6 +9,7 @@ http://tiddlyweb.com/
 """
 from __future__ import absolute_import
 
+from sqlalchemy import event
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError, DisconnectionError
 from sqlalchemy.orm.exc import NoResultFound, StaleDataError
@@ -49,7 +50,7 @@ TABLES = [field_table, revision_table, tiddler_table, bag_table, text_table,
         policy_table, recipe_table, role_table, user_table, tag_table]
 
 
-class LookLively(object):
+def on_checkout(dbapi_con, con_record, con_proxy):
     """
     Ensures that MySQL connections checked out of the
     pool are alive.
@@ -57,20 +58,18 @@ class LookLively(object):
     Borrowed from:
     http://groups.google.com/group/sqlalchemy/msg/a4ce563d802c929f
     """
-
-    def checkout(self, dbapi_con, con_record, con_proxy):
+    try:
         try:
-            try:
-                dbapi_con.ping(False)
-            except TypeError:
-                dbapi_con.ping()
-        except dbapi_con.OperationalError, ex:
-            if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
-                logging.warn('got mysql server has gone away: %s', ex)
-                # caught by pool, which will retry with a new connection
-                raise DisconnectionError()
-            else:
-                raise
+            dbapi_con.ping(False)
+        except TypeError:
+            dbapi_con.ping()
+    except dbapi_con.OperationalError, ex:
+        if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
+            logging.warn('got mysql server has gone away: %s', ex)
+            # caught by pool, which will retry with a new connection
+            raise DisconnectionError()
+        else:
+            raise
 
 
 class Store(SQLStore):
@@ -86,8 +85,8 @@ class Store(SQLStore):
                     pool_recycle=3600,
                     pool_size=20,  # XXX these three ought to come from config
                     max_overflow=-1,
-                    pool_timeout=2,
-                    listeners=[LookLively()])
+                    pool_timeout=2)
+            event.listen(ENGINE, 'checkout', on_checkout)
             metadata.bind = ENGINE
             Session.configure(bind=ENGINE)
         self.session = Session()
