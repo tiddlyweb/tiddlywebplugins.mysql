@@ -5,9 +5,7 @@ from tiddlyweb.model.bag import Bag
 
 from tiddlywebplugins.utils import get_store
 
-from tiddlywebplugins.mysql2 import index_query
-from tiddlywebplugins.sqlalchemy2 import (sField, sRevision, sText,
-        sBag, sRecipe, sUser, sPolicy, sRole, sTag, sTiddler)
+from tiddlywebplugins.mysql2 import index_query, Base
 
 def setup_module(module):
     module.store = get_store(config)
@@ -15,9 +13,8 @@ def setup_module(module):
             'tiddlyweb.store': module.store}
     session = module.store.storage.session
 # delete everything
-    for table in (sField, sRevision, sBag, sRecipe, sUser, sText,
-            sPolicy, sRole, sTag, sTiddler):
-        session.query(table).delete()
+    Base.metadata.drop_all()
+    Base.metadata.create_all()
 
 def test_simple_store():
     bag = Bag('bag1')
