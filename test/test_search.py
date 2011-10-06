@@ -1,3 +1,4 @@
+import py.test
 from tiddlyweb.config import config
 
 from tiddlyweb.model.tiddler import Tiddler
@@ -226,6 +227,7 @@ def test_modified():
     assert len(tiddlers) == 1
 
     tiddler = Tiddler('GettingStarted', 'fnd_public')
+    tiddler.tags = [u'monkey', u'cow', u'food']
     tiddler.modifier = u'cdent';
     store.put(tiddler)
 
@@ -234,6 +236,7 @@ def test_modified():
     assert len(tiddlers) == 0
 
     tiddler = Tiddler('GettingFancy', 'fnd_public')
+    tiddler.tags = [u'cow', u'food']
     tiddler.modifier = u'fnd';
     store.put(tiddler)
 
@@ -251,6 +254,11 @@ def test_modified():
 
     tiddlers = list(store.search(u'modifier:fnd AND modified:20*'))
 
+    assert len(tiddlers) == 1
+
+def test_not():
+    py.test.skip('need better sql-fu to get this right')
+    tiddlers = list(store.search(u'bag:fnd_public NOT tag:monkey'))
     assert len(tiddlers) == 1
 
 def test_or_tags():
