@@ -351,6 +351,7 @@ class Producer(object):
                             expression = (tag_table.c.tag.like(value))
                         else:
                             expression = (tag_table.c.tag == value)
+                        self.query = self.query.distinct()
                         self.joined_tags = True
                     else:
                         if like:

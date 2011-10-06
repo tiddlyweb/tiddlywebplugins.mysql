@@ -18,6 +18,8 @@ def setup_module(module):
     for table in (sField, sRevision, sBag, sRecipe, sUser, sText,
             sPolicy, sRole, sTag, sTiddler):
         session.query(table).delete()
+    session.execute("DROP INDEX tiddlytext on text")
+    session.execute("CREATE FULLTEXT INDEX tiddlytext ON text(text)")
 
 def test_simple_store():
     bag = Bag('bag1')
@@ -250,3 +252,18 @@ def test_modified():
     tiddlers = list(store.search(u'modifier:fnd AND modified:20*'))
 
     assert len(tiddlers) == 1
+
+def test_or_tags():
+    tiddler = Tiddler('tagone', 'fnd_public')
+    tiddler.text = 'hi @onething hello'
+    tiddler.tags = ['one','three', 'five']
+    store.put(tiddler)
+
+    tiddler = Tiddler('tagtwo', 'fnd_public')
+    tiddler.text = 'hi @twothing hello'
+    tiddler.tags = ['two', 'four', 'six']
+    store.put(tiddler)
+
+    tiddlers = list(store.search(u'@twothing OR tag:one'))
+
+    assert len(tiddlers) == 2
