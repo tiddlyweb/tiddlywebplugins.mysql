@@ -152,7 +152,7 @@ class Store(SQLStore):
         Override sqlalchemy's tiddler delete to deal with a rare
         problem that happens because of MyISAM's lack of transaction
         support. It is possible for a DELETE to happen concurrently,
-        or to leave behind stale data. This tries to trap that 
+        or to leave behind stale data. This tries to trap that
         occurance and ride over it smoothly while leaving the data
         in an acceptable state.
         """
@@ -394,7 +394,7 @@ class Producer(object):
                         u'greatcircle < %s' % radius).order_by('greatcircle')
                 expression = and_(field_alias1.c.name == u'geo.long',
                         field_alias2.c.name == u'geo.lat')
-                self.limit = 20 # XXX: make this passable
+                self.limit = 20  # XXX: make this passable
             elif fieldname == '_limit':
                 try:
                     self.limit = int(value)
