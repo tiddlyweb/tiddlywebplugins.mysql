@@ -9,10 +9,6 @@ The main additions are:
 * Provide an index_query method to allow the plugin to be used as
   an 'indexer' for filters and determine_bag_for_tiddler.
 
-Copyright 2011, Chris Dent <cdent@peermore.com>
-
-Licensed as TiddlyWeb itself.
-
 NOTES
 
 It's import to set some mysql my.cnf variables otherwise searches
