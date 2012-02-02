@@ -93,7 +93,9 @@ class Store(SQLStore):
         if not MAPPED:
             for table in Base.metadata.sorted_tables:
                 table.kwargs['mysql_charset'] = 'utf8'
-                if table.name != 'text':
+                if table.name == 'text':
+                    table.kwargs['mysql_engine'] = 'MyISAM'
+                else:
                     table.kwargs['mysql_engine'] = 'InnoDB'
                 if table.name == 'revision' or table.name == 'tiddler':
                     for column in table.columns:
