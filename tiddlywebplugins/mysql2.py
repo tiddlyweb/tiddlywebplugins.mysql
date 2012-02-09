@@ -97,6 +97,7 @@ class Store(SQLStore):
         if not MAPPED:
             for table in TABLES:
                 table.kwargs['mysql_charset'] = 'utf8'
+                table.kwargs['mysql_engine'] = 'MyISAM'
                 if table.name == 'revision' or table.name == 'tiddler':
                     for column in table.columns:
                         if (column.name == 'tiddler_title'
