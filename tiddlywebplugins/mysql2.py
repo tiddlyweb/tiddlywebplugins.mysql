@@ -309,9 +309,15 @@ class Producer(object):
         value = node[0]
         if fieldname:
             like = False
-            if value.endswith('*'):
-                value = value.replace('*', '%')
-                like = True
+            try:
+                if value.endswith('*'):
+                    value = value.replace('*', '%')
+                    like = True
+            except TypeError:
+                # Hack around field values containing parens
+                # The node[0] is a non-string if that's the case.
+                node[0] = '(' + value[0] + ')'
+                return self._Word(node, fieldname)
 
             if fieldname == 'ftitle':
                 fieldname = 'title'

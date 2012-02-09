@@ -275,3 +275,14 @@ def test_or_tags():
     tiddlers = list(store.search(u'@twothing OR tag:one'))
 
     assert len(tiddlers) == 2
+
+def test_paren_title():
+    tiddler = Tiddler('(i)', 'fnd_public')
+    tiddler.text = 'hi @onething hello'
+    tiddler.tags = ['one','three', 'five']
+    store.put(tiddler)
+
+    tiddlers = list(store.search(u'title:(i)'))
+
+    assert len(tiddlers) == 1
+    assert tiddlers[0].title == '(i)'
