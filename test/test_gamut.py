@@ -11,7 +11,7 @@ from tiddlyweb.model.recipe import Recipe
 from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.model.user import User
 
-from tiddlywebplugins.mysql2 import Base
+from tiddlywebplugins.mysql3 import Base
 
 from base64 import b64encode
 

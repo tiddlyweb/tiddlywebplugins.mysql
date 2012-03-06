@@ -6,7 +6,7 @@ from tiddlyweb.model.bag import Bag
 
 from tiddlywebplugins.utils import get_store
 
-from tiddlywebplugins.mysql2 import index_query, Base
+from tiddlywebplugins.mysql3 import index_query, Base
 
 def setup_module(module):
     module.store = get_store(config)

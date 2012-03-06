@@ -3,7 +3,7 @@
 
 def test_compile():
     try:
-        import tiddlywebplugins.mysql2
+        import tiddlywebplugins.mysql3
         assert True
     except ImportError, exc:
         assert False, exc
