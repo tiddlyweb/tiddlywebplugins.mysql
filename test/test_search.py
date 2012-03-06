@@ -19,7 +19,10 @@ def setup_module(module):
     for table in (sField, sRevision, sBag, sRecipe, sUser, sText,
             sPolicy, sRole, sTag, sTiddler):
         session.query(table).delete()
-    session.execute("DROP INDEX tiddlytext on text")
+    try:
+        session.execute("DROP INDEX tiddlytext on text")
+    except:
+        pass # !!!! The above can fail if the index isn't there
     session.execute("CREATE FULLTEXT INDEX tiddlytext ON text(text)")
 
 def test_simple_store():

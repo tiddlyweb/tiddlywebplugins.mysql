@@ -1,6 +1,12 @@
 A plugin for TiddlyWeb subclassing tiddlywebplugins.sqlalchemy2 with mysql specifics.
 
-The main additions are:
+!!! WARNING !!!
+This code will only work with mysql versions 5.1 and earlier. Work is in
+progress with a version that works correctly with 5.5. If you have 5.5
+and want to experiment with a test version please post in the tiddlyweb
+google group: http://groups.google.com/group/tiddlyweb
+
+The main additions to sqlalchemy2 are:
 
 * Provide a reasonable search interface using mysql's fulltext.
 * Provide field based searches of tiddler attributes and fields.
