@@ -11,10 +11,9 @@ from tiddlyweb.model.recipe import Recipe
 from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.model.user import User
 
-from base64 import b64encode
+from tiddlywebplugins.mysql2 import Base
 
-from tiddlywebplugins.sqlalchemy2 import (sField, sRevision,
-        sBag, sRecipe, sUser, sPolicy, sText, sRole, sTiddler, sTag)
+from base64 import b64encode
 
 #RANGE = 1000
 RANGE = 10
@@ -25,9 +24,9 @@ def setup_module(module):
             config['server_store'][1],
             {'tiddlyweb.config': config}
             )
-    for table in (sTiddler, sTag, sText, sField, sRevision, sBag, sRecipe, sUser,
-            sPolicy, sRole):
-        store.storage.session.query(table).delete()
+# delete everything
+    Base.metadata.drop_all()
+    Base.metadata.create_all()
     import warnings
     warnings.simplefilter('error')
 
