@@ -370,7 +370,7 @@ class Producer(object):
                 except ValueError:
                     pass
                 self.query = self.query.order_by(
-                        sRevision.number.desc())
+                        sRevision.modified.desc())
                 expression = None
             elif hasattr(sRevision, fieldname):
                 if self.in_and:
