@@ -386,3 +386,29 @@ def test_bag_deletes_tiddlers():
     bag = Bag(u'pone')
     py.test.raises(NoBagError, 'list(store.list_bag_tiddlers(bag))')
     py.test.raises(NoTiddlerError, 'store.list_tiddler_revisions(tiddler)')
+
+def test_multi_same_tag_tiddler():
+    bag = Bag(u'holder')
+    store.put(bag)
+    tiddler = Tiddler('me', 'holder')
+    tiddler.text = 'hi'
+    tiddler.tags = ['foo']
+    store.put(tiddler)
+
+    tiddler2 = Tiddler('me', 'holder')
+    tiddler2 = store.get(tiddler2)
+    tiddler2.tags.append('bar')
+    tiddler2.tags.append('bar')
+    store.put(tiddler2)
+
+    tiddler3 = store.get(Tiddler('me', 'holder'))
+    assert sorted(tiddler3.tags) == ['bar', 'foo']
+
+def test_multi_role_user():
+    user = User(u'cdent')
+    user.add_role('cow')
+    user.add_role('cow')
+    store.put(user)
+
+    user2 = store.get(User(u'cdent'))
+    assert list(user2.roles) == ['cow']
