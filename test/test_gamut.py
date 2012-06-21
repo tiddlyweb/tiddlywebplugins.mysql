@@ -412,3 +412,16 @@ def test_multi_role_user():
 
     user2 = store.get(User(u'cdent'))
     assert list(user2.roles) == ['cow']
+
+def test_long_tiddler_title():
+    long_title = 'I would not do that if I were you, it might have consequences more than dire than you could possibly imagine. So dire you might have an oh no moment something severe.'
+    tiddler1 = Tiddler(long_title + '1', 'holder')
+    tiddler1.text = 'tiddler1'
+    tiddler2 = Tiddler(long_title + '1', 'holder')
+    tiddler2.text = 'tiddler2'
+
+    py.test.raises(TypeError, 'store.put(tiddler1)')
+    py.test.raises(TypeError, 'store.put(tiddler2)')
+
+    py.test.raises(NoTiddlerError, 'store.get(tiddler1)')
+    py.test.raises(NoTiddlerError, 'store.get(tiddler2)')

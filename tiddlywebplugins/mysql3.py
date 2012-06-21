@@ -7,7 +7,10 @@ http://github.com/cdent/tiddlywebplugins.mysql
 http://tiddlyweb.com/
 
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
+
+import warnings
+import MySQLdb
 
 from sqlalchemy import event
 from sqlalchemy.engine import create_engine
@@ -121,6 +124,19 @@ class Store(SQLStore):
 
             Base.metadata.create_all(ENGINE)
             MAPPED = True
+
+    def tiddler_put(self, tiddler):
+        """
+        Override the super to trap MySQLdb.Warning which is raised
+        when mysqld would truncate a field during an insert. We 
+        want to not store the tiddler, and report a useful error.
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', MySQLdb.Warning)
+            try:
+                SQLStore.tiddler_put(self, tiddler)
+            except MySQLdb.Warning, exc:
+                raise TypeError('mysql refuses to store tiddler: %s' % exc)
 
     def search(self, search_query=''):
         query = self.session.query(sTiddler).join('current')
