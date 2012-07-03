@@ -281,3 +281,13 @@ def test_paren_title():
 
     assert len(tiddlers) == 1
     assert tiddlers[0].title == '(i)'
+
+def test_text_as_field():
+    tiddlers = list(store.search(u'text:hello'))
+
+    assert len(tiddlers) == 4, tiddlers
+
+def test_srevision_attr():
+    tiddlers = list(store.search(u'fields:hello'))
+
+    assert len(tiddlers) == 0, tiddlers

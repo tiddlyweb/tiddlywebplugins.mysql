@@ -387,7 +387,14 @@ class Producer(object):
                 self.query = self.query.order_by(
                         sRevision.modified.desc())
                 expression = None
-            elif hasattr(sRevision, fieldname):
+            elif fieldname == 'text':
+                if not self.joined_text:
+                    self.query = self.query.join(sText)
+                    self.joined_text = True
+                expression = (text_(
+                    'MATCH(text.text) '
+                    + "AGAINST('%s' in boolean mode)" % value))
+            elif fieldname in ['modifier', 'modified', 'type']:
                 if self.in_and:
                     revision_alias = aliased(sRevision)
                     self.query = self.query.join(revision_alias)
