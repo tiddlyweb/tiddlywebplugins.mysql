@@ -39,7 +39,7 @@ import logging
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '3.0.4'
+__version__ = '3.0.5'
 
 ENGINE = None
 MAPPED = False
