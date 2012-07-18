@@ -1,3 +1,6 @@
+"""
+Produce a sqlalchemy query object from the parser AST.
+"""
 
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import (and_, or_, not_, text as text_, label)
@@ -8,9 +11,17 @@ from tiddlyweb.store import StoreError
 from tiddlywebplugins.sqlalchemy3 import (sField, sTag, sText, sTiddler,
         sRevision)
 
+
 class Producer(object):
+    """
+    Turn a tiddlywebplugins.mysql.parser AST into a sqlalchemy query.
+    """
 
     def produce(self, ast, query):
+        """
+        Given an ast and an empty query, build that query into a 
+        full select, based on the info in the ast.
+        """
         self.joined_revision = False
         self.joined_tags = False
         self.joined_fields = False
@@ -18,8 +29,8 @@ class Producer(object):
         self.in_and = False
         self.in_or = False
         self.in_not = False
-        self.query = query
         self.limit = None
+        self.query = query
         expressions = self._eval(ast, None)
         if self.limit:
             return self.query.filter(expressions).limit(self.limit)
@@ -122,7 +133,7 @@ class Producer(object):
                         u'greatcircle < %s' % radius).order_by('greatcircle')
                 expression = and_(field_alias1.name == u'geo.long',
                         field_alias2.name == u'geo.lat')
-                self.limit = 20 # XXX: make this passable
+                self.limit = 20  # XXX: make this passable
             elif fieldname == '_limit':
                 try:
                     self.limit = int(value)
@@ -230,4 +241,3 @@ class Producer(object):
     def _Quotes(self, node, fieldname):
         node[0] = '"%s"' % node[0]
         return self._Word(node, fieldname)
-

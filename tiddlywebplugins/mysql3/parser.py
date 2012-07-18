@@ -5,8 +5,7 @@ to create an appropriate SQL query.
 
 from pyparsing import (printables, alphanums, OneOrMore, Group,
         Combine, Suppress, Literal, CharsNotIn,
-        Word, Keyword, Empty, White, Forward, QuotedString, StringEnd,
-        ParseException)
+        Word, Keyword, Empty, White, Forward, QuotedString, StringEnd)
 
 
 def _make_default_parser():
@@ -21,7 +20,6 @@ def _make_default_parser():
 
     Borrowed from early Whoosh versions
     """
-    
     escapechar = "\\"
 
     wordtext = CharsNotIn('\\():"{}[] ')

@@ -12,6 +12,8 @@ from __future__ import absolute_import, with_statement
 import warnings
 import MySQLdb
 
+from pyparsing import ParseException
+
 from sqlalchemy import event
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import ProgrammingError, DisconnectionError
@@ -27,7 +29,7 @@ from tiddlywebplugins.sqlalchemy3 import (Store as SQLStore,
 
 from tiddlyweb.filters import FilterIndexRefused
 
-from .parser import DEFAULT_PARSER, ParseException
+from .parser import DEFAULT_PARSER
 from .producer import Producer
 
 import logging
@@ -77,7 +79,6 @@ class Store(SQLStore):
         self.producer = Producer()
         SQLStore.__init__(self, store_config, environ)
 
-
     def _init_store(self):
         """
         Establish the database engine and session,
@@ -103,7 +104,7 @@ class Store(SQLStore):
     def tiddler_put(self, tiddler):
         """
         Override the super to trap MySQLdb.Warning which is raised
-        when mysqld would truncate a field during an insert. We 
+        when mysqld would truncate a field during an insert. We
         want to not store the tiddler, and report a useful error.
         """
         warnings.simplefilter('error', MySQLdb.Warning)
@@ -175,7 +176,6 @@ def index_query(environ, **kwargs):
         return (store.get(tiddler) for tiddler in tiddlers)
     except StoreError, exc:
         raise FilterIndexRefused('error in the store: %s' % exc)
-
 
 
 def _map_tables(tables):
