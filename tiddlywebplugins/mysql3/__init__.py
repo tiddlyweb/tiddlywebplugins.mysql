@@ -66,6 +66,17 @@ def on_checkout(dbapi_con, con_record, con_proxy):
 
 
 class Store(SQLStore):
+    """
+    An adaptation of the generic sqlalchemy store, to add mysql
+    specific functionality, including search.
+    """
+
+    def __init__(self, store_config=None, environ=None):
+        self.serializer = Serializer('text')
+        self.parser = DEFAULT_PARSER
+        self.producer = Producer()
+        SQLStore.__init__(self, store_config, environ)
+
 
     def _init_store(self):
         """
@@ -76,46 +87,16 @@ class Store(SQLStore):
         if not ENGINE:
             ENGINE = create_engine(self._db_config(),
                     pool_recycle=3600,
-                    pool_size=20,  # XXX these three ought to come from config
+                    pool_size=20,
                     max_overflow=-1,
                     pool_timeout=2)
             event.listen(ENGINE, 'checkout', on_checkout)
             Base.metadata.bind = ENGINE
             Session.configure(bind=ENGINE)
         self.session = Session()
-        self.serializer = Serializer('text')
-        self.parser = DEFAULT_PARSER
-        self.producer = Producer()
 
         if not MAPPED:
-            for table in Base.metadata.sorted_tables:
-                table.kwargs['mysql_charset'] = 'utf8'
-                if table.name == 'text':
-                    table.kwargs['mysql_engine'] = 'MyISAM'
-                else:
-                    table.kwargs['mysql_engine'] = 'InnoDB'
-                if table.name == 'revision' or table.name == 'tiddler':
-                    for column in table.columns:
-                        if (column.name == 'tiddler_title'
-                                or column.name == 'title'):
-                            column.type = VARCHAR(length=128,
-                                    convert_unicode=True, collation='utf8_bin')
-                if table.name == 'text':
-                    for column in table.columns:
-                        if column.name == 'text':
-                            column.type = LONGTEXT(convert_unicode=True,
-                                    collation='utf8_bin')
-                if table.name == 'tag':
-                    for column in table.columns:
-                        if column.name == 'tag':
-                            column.type = VARCHAR(length=191,
-                                    convert_unicode=True, collation='utf8_bin')
-                if table.name == 'field':
-                    for column in table.columns:
-                        if column.name == 'value':
-                            column.type = VARCHAR(length=191,
-                                    convert_unicode=True, collation='utf8_bin')
-
+            _map_tables(Base.metadata.sorted_tables)
             Base.metadata.create_all(ENGINE)
             MAPPED = True
 
@@ -132,6 +113,10 @@ class Store(SQLStore):
             raise TypeError('mysql refuses to store tiddler: %s' % exc)
 
     def search(self, search_query=''):
+        """
+        Do a search of of the database, using the 'q' query,
+        parsed by the parser and turned into a producer.
+        """
         query = self.session.query(sTiddler).join('current')
         if '_limit:' not in search_query:
             default_limit = self.environ.get(
@@ -163,6 +148,13 @@ class Store(SQLStore):
 
 
 def index_query(environ, **kwargs):
+    """
+    Attempt to optimize filter processing by using the search index
+    to provide results that can be matched.
+
+    In practice, this proves not to be that helpful when memcached
+    is being used, but it is in other situations.
+    """
     store = environ['tiddlyweb.store']
 
     queries = []
@@ -183,3 +175,45 @@ def index_query(environ, **kwargs):
         return (store.get(tiddler) for tiddler in tiddlers)
     except StoreError, exc:
         raise FilterIndexRefused('error in the store: %s' % exc)
+
+
+
+def _map_tables(tables):
+    """
+    Transform the sqlalchemy table information into mysql specific
+    table information.
+
+    XXX: This ought to be doable in a more declarative fashion.
+    """
+    for table in tables:
+        table.kwargs['mysql_charset'] = 'utf8'
+
+        if table.name == 'text':
+            table.kwargs['mysql_engine'] = 'MyISAM'
+        else:
+            table.kwargs['mysql_engine'] = 'InnoDB'
+
+        if table.name == 'revision' or table.name == 'tiddler':
+            for column in table.columns:
+                if (column.name == 'tiddler_title'
+                        or column.name == 'title'):
+                    column.type = VARCHAR(length=128,
+                            convert_unicode=True, collation='utf8_bin')
+
+        if table.name == 'text':
+            for column in table.columns:
+                if column.name == 'text':
+                    column.type = LONGTEXT(convert_unicode=True,
+                            collation='utf8_bin')
+
+        if table.name == 'tag':
+            for column in table.columns:
+                if column.name == 'tag':
+                    column.type = VARCHAR(length=191,
+                            convert_unicode=True, collation='utf8_bin')
+
+        if table.name == 'field':
+            for column in table.columns:
+                if column.name == 'value':
+                    column.type = VARCHAR(length=191,
+                            convert_unicode=True, collation='utf8_bin')
