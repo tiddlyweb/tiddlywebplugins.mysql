@@ -17,7 +17,7 @@ class Producer(object):
     Turn a tiddlywebplugins.mysql.parser AST into a sqlalchemy query.
     """
 
-    def produce(self, ast, query):
+    def produce(self, ast, query, fulltext=False):
         """
         Given an ast and an empty query, build that query into a 
         full select, based on the info in the ast.
@@ -31,6 +31,7 @@ class Producer(object):
         self.in_not = False
         self.limit = None
         self.query = query
+        self.fulltext = fulltext
         expressions = self._eval(ast, None)
         if self.limit:
             return self.query.filter(expressions).limit(self.limit)
@@ -146,9 +147,13 @@ class Producer(object):
                 if not self.joined_text:
                     self.query = self.query.join(sText)
                     self.joined_text = True
-                expression = (text_(
-                    'MATCH(text.text) '
-                    + "AGAINST('%s' in boolean mode)" % value))
+                if self.fulltext:
+                    expression = (text_(
+                        'MATCH(text.text) '
+                        + "AGAINST('%s' in boolean mode)" % value))
+                else:
+                    value = '%' + value + '%'
+                    expression = sText.text.like(value)
             elif fieldname in ['modifier', 'modified', 'type']:
                 if self.in_and:
                     revision_alias = aliased(sRevision)
@@ -200,9 +205,13 @@ class Producer(object):
             if not self.joined_text:
                 self.query = self.query.join(sText)
                 self.joined_text = True
-            expression = (text_(
-                'MATCH(text.text) '
-                + "AGAINST('%s' in boolean mode)" % value))
+            if self.fulltext:
+                expression = (text_(
+                    'MATCH(text.text) '
+                    + "AGAINST('%s' in boolean mode)" % value))
+            else:
+                value = '%' + value + '%'
+                expression = sText.text.like(value)
         return expression
 
     def _Field(self, node, fieldname):

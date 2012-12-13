@@ -2,7 +2,7 @@ A plugin for TiddlyWeb subclassing tiddlywebplugins.sqlalchemy3 with mysql speci
 
 The main additions to sqlalchemy3 are:
 
-* Provide a reasonable search interface using mysql's fulltext.
+* Optionally provide a reasonable search interface using mysql's fulltext.
 * Provide field based searches of tiddler attributes and fields.
 * Support finding tiddlers that have geo.lat and geo.long fields
   near a location.
@@ -11,8 +11,8 @@ The main additions to sqlalchemy3 are:
 
 NOTES
 
-It's import to set some mysql my.cnf variables otherwise searches
-will likely fail.
+It is important to set some mysql my.cnf variables if you are using
+the fulltext indexing otherwise searches will likely fail.
 
 [mysqld]
 ft_min_word_len = 3
@@ -29,6 +29,12 @@ If you want to use the fulltext indexing capability you will need to
 create the fulltext index:
 
     CREATE FULLTEXT INDEX tiddlytext ON text(text);
+
+Also set 'mysql.fulltext' to True in tiddlywebconfig.py. This makes
+sure the text table is MyISAM.
+
+Note that even if fulltext is not turned on, text searches will still
+work, but not as flexibly.
 
 Thanks to Adrian Hosey <http://adrianhosey.blogspot.com/> for help over
 some SQL humps.

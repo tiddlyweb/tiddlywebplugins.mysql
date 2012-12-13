@@ -32,7 +32,7 @@ def test_simple_store():
     assert retrieved.text == tiddler.text
 
 def test_simple_search():
-    tiddlers = list(store.search('"chrisdent"'))
+    tiddlers = list(store.search('chrisdent'))
     assert len(tiddlers) == 1
     assert tiddlers[0].title == 'tiddler1'
     assert tiddlers[0].bag == 'bag1'
@@ -159,10 +159,10 @@ def test_search_follow_syntax():
     tiddlers = list(store.search(QUERY))
     assert len(tiddlers) == 2
 
-    tiddlers = list(store.search(u'"cdent starts"'))
+    tiddlers = list(store.search(u'cdent starts'))
     assert len(tiddlers) == 2
 
-    tiddlers = list(store.search(u'"fnd starts"'))
+    tiddlers = list(store.search(u'fnd starts'))
     assert len(tiddlers) == 1
 
     tiddler = list(store.search(u'left-hand:"well dirty"'))

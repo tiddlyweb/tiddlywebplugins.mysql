@@ -97,7 +97,8 @@ class Store(SQLStore):
         self.session = Session()
 
         if not MAPPED:
-            _map_tables(Base.metadata.sorted_tables)
+            _map_tables(self.environ['tiddlyweb.config'],
+                    Base.metadata.sorted_tables)
             Base.metadata.create_all(ENGINE)
             MAPPED = True
 
@@ -127,7 +128,9 @@ class Store(SQLStore):
         try:
             try:
                 ast = self.parser(search_query)[0]
-                query = self.producer.produce(ast, query)
+                config = self.environ['tiddlyweb.config']
+                fulltext = config.get('mysql.fulltext', False)
+                query = self.producer.produce(ast, query, fulltext=fulltext)
             except ParseException, exc:
                 raise StoreError('failed to parse search query: %s' % exc)
 
@@ -178,17 +181,18 @@ def index_query(environ, **kwargs):
         raise FilterIndexRefused('error in the store: %s' % exc)
 
 
-def _map_tables(tables):
+def _map_tables(config, tables):
     """
     Transform the sqlalchemy table information into mysql specific
     table information.
 
     XXX: This ought to be doable in a more declarative fashion.
     """
+    fulltext = config.get('mysql.fulltext', False)
     for table in tables:
         table.kwargs['mysql_charset'] = 'utf8'
 
-        if table.name == 'text':
+        if table.name == 'text' and fulltext:
             table.kwargs['mysql_engine'] = 'MyISAM'
         else:
             table.kwargs['mysql_engine'] = 'InnoDB'
