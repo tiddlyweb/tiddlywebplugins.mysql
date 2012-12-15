@@ -45,7 +45,12 @@ class Producer(object):
     def _Toplevel(self, node, fieldname):
         expressions = []
         for subnode in node:
-            expressions.append(self._eval(subnode, fieldname))
+            expression = self._eval(subnode, fieldname)
+            # Check to confirm that the expression is a proper
+            # expression, otherwise don't add it. None is used
+            # to indicate the producer sort of fell through
+            if expression is not None:
+                expressions.append(expression)
         return and_(*expressions)
 
     def _Word(self, node, fieldname):
