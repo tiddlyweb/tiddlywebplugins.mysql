@@ -39,10 +39,13 @@ import logging
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '3.0.8'
+__version__ = '3.0.9'
 
 ENGINE = None
 MAPPED = False
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def on_checkout(dbapi_con, con_record, con_proxy):
@@ -60,7 +63,7 @@ def on_checkout(dbapi_con, con_record, con_proxy):
             dbapi_con.ping()
     except dbapi_con.OperationalError, ex:
         if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
-            logging.debug('got mysql server has gone away: %s', ex)
+            LOGGER.debug('got mysql server has gone away: %s', ex)
             # caught by pool, which will retry with a new connection
             raise DisconnectionError()
         else:
