@@ -271,6 +271,16 @@ def test_or_tags():
 
     assert len(tiddlers) == 2
 
+def test_at_tags():
+    tiddler = Tiddler('tagat', 'fnd_public')
+    tiddler.text = 'new stuff to not mess'
+    tiddler.tags = ['one','three', 'five', '@cdent']
+    store.put(tiddler)
+
+    tiddlers = list(store.search(u'tag:@cdent'))
+
+    assert len(tiddlers) == 1
+
 def test_paren_title():
     tiddler = Tiddler('(i)', 'fnd_public')
     tiddler.text = 'hi @onething hello'
