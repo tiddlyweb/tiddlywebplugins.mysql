@@ -425,3 +425,31 @@ def test_long_tiddler_title():
 
     py.test.raises(NoTiddlerError, 'store.get(tiddler1)')
     py.test.raises(NoTiddlerError, 'store.get(tiddler2)')
+
+@py.test.mark.xfail
+def test_emoji_title():
+    """
+    We expect this to fail because we're using a) old mysql
+    b) without the utf8mb4 encoding type.
+    See: https://github.com/TiddlySpace/tiddlyspace/issues/1033
+
+    The fix is to use mysql 5.5 or beyond.
+    """
+    # emoji smiley of some sort
+    title = '\xF0\x9F\x98\x97'.decode('utf-8')
+    store.put(Bag(title))
+
+    tiddler = Tiddler(title, title)
+    tiddler.text = u'some stuff and zomg %s' % title
+    tiddler.tags = [title]
+    tiddler.fields[title] = title
+    store.put(tiddler)
+
+    tiddler2 = store.get(Tiddler(title, title))
+
+    assert tiddler2.title == title
+    assert tiddler2.text == tiddler.text
+    assert tiddler2.tags == tiddler.tags
+    assert tiddler2.tags[0] == title
+    assert tiddler2.fields[title] == tiddler.fields[title]
+    assert tiddler2.fields[title] == title
