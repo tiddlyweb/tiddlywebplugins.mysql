@@ -193,7 +193,6 @@ def _map_tables(config, tables):
     """
     fulltext = config.get('mysql.fulltext', False)
     for table in tables:
-        table.kwargs['mysql_charset'] = 'utf8'
 
         if table.name == 'text' and fulltext:
             table.kwargs['mysql_engine'] = 'MyISAM'
@@ -204,23 +203,19 @@ def _map_tables(config, tables):
             for column in table.columns:
                 if (column.name == 'tiddler_title'
                         or column.name == 'title'):
-                    column.type = VARCHAR(length=128,
-                            convert_unicode=True, collation='utf8_bin')
+                    column.type = VARCHAR(length=128, convert_unicode=True)
 
         if table.name == 'text':
             for column in table.columns:
                 if column.name == 'text':
-                    column.type = LONGTEXT(convert_unicode=True,
-                            collation='utf8_bin')
+                    column.type = LONGTEXT(convert_unicode=True)
 
         if table.name == 'tag':
             for column in table.columns:
                 if column.name == 'tag':
-                    column.type = VARCHAR(length=191,
-                            convert_unicode=True, collation='utf8_bin')
+                    column.type = VARCHAR(length=191, convert_unicode=True)
 
         if table.name == 'field':
             for column in table.columns:
                 if column.name == 'value':
-                    column.type = VARCHAR(length=191,
-                            convert_unicode=True, collation='utf8_bin')
+                    column.type = VARCHAR(length=191, convert_unicode=True)

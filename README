@@ -18,11 +18,18 @@ the fulltext indexing otherwise searches will likely fail.
 ft_min_word_len = 3
 ft_stopword_file = ''
 
-You will need to create a database. I use one called 'tiddlyweb', and
-add the following to tiddlywebconfig.py:
+You will need to create a database. I use one called 'tiddlyweb':
+
+    create database tiddlyweb \
+        character set = utf8mb4 \
+        collate = utf8mb4_bin;
+
+Make sure you GRANT appropriate PRIVILEGES on the database.
+
+Add the following to tiddlywebconfig.py:
 
     'server_store': ['tiddlywebplugins.mysql', {
-        'db_config': 'mysql:///tiddlyweb?charset=utf8&use_unicode=0'}],
+        'db_config': 'mysql:///tiddlyweb?charset=utf8mb4'}],
     'indexer': 'tiddlywebplugins.mysql',
 
 If you want to use the fulltext indexing capability you will need to
