@@ -11,6 +11,8 @@ The main additions to sqlalchemy3 are:
 
 NOTES
 
+MySQL 5.5 or beyond is required for full Unicode support.
+
 It is important to set some mysql my.cnf variables if you are using
 the fulltext indexing otherwise searches will likely fail.
 
