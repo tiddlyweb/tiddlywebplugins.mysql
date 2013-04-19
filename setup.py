@@ -2,7 +2,7 @@ AUTHOR = 'Chris Dent'
 AUTHOR_EMAIL = 'cdent@peermore.com'
 NAME = 'tiddlywebplugins.mysql3'
 DESCRIPTION = 'MySQL-based store for tiddlyweb'
-VERSION = '3.0.10' # don't forget to update mysql.py too
+VERSION = '3.0.11' # don't forget to update __init__.py too
 
 
 import os
