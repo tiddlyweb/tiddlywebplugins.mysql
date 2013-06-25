@@ -216,6 +216,7 @@ def _map_tables(config, tables):
                     column.type = VARCHAR(length=191, convert_unicode=True)
 
         if table.name == 'field':
-            for column in table.columns:
-                if column.name == 'value':
-                    column.type = VARCHAR(length=191, convert_unicode=True)
+            for index in table.indexes:
+                # XXX: is the naming system reliable?
+                if index.name == 'ix_field_value':
+                    index.kwargs['mysql_length'] = 191
