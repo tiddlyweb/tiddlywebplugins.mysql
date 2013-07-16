@@ -213,6 +213,11 @@ def test_limited_search():
     assert len(tiddlers) != 1, tiddlers
 
 def test_modified():
+    """
+    Note the multiple store.put in here are to create
+    additional revisions to make sure that joins are
+    sufficiently limited.
+    """
     tiddler = Tiddler('GettingStarted', 'fnd_public')
     tiddler.modifier = u'fnd';
     store.put(tiddler)
@@ -225,6 +230,9 @@ def test_modified():
     tiddler.tags = [u'monkey', u'cow', u'food']
     tiddler.modifier = u'cdent';
     store.put(tiddler)
+    store.put(tiddler)
+    store.put(tiddler)
+    store.put(tiddler)
 
     tiddlers = list(store.search(u'modifier:fnd'))
 
@@ -233,6 +241,9 @@ def test_modified():
     tiddler = Tiddler('GettingFancy', 'fnd_public')
     tiddler.tags = [u'cow', u'food']
     tiddler.modifier = u'fnd';
+    store.put(tiddler)
+    store.put(tiddler)
+    store.put(tiddler)
     store.put(tiddler)
 
     tiddlers = list(store.search(u'modifier:fnd OR modifier:cdent'))
@@ -253,6 +264,9 @@ def test_modified():
 
 def test_not():
     py.test.skip('need better sql-fu to get this right')
+    # If we do a group by tag in the query we get reasonable 
+    # results but we can't effectively produce that group by in
+    # the face of other arbitrary queries.
     tiddlers = list(store.search(u'bag:fnd_public NOT tag:monkey'))
     assert len(tiddlers) == 1
 
@@ -301,3 +315,20 @@ def test_srevision_attr():
     tiddlers = list(store.search(u'fields:hello'))
 
     assert len(tiddlers) == 0, tiddlers
+
+def test_tiddler_field_join():
+    tiddler = Tiddler('fieldtest', 'fnd_public')
+    tiddler.text = 'hi again'
+    tiddler.fields = {
+            u'barney': u'evil',
+            u'soup': u'good',
+    }
+    store.put(tiddler)
+
+    tiddlers = list(store.search(u'barney:evil'))
+    assert len(tiddlers) == 1
+    assert tiddlers[0].title == 'fieldtest'
+
+    tiddlers = list(store.search(u'barney:evil AND soup:good'))
+    assert len(tiddlers) == 1
+    assert tiddlers[0].title == 'fieldtest'

@@ -34,9 +34,10 @@ class Producer(object):
         self.fulltext = fulltext
         expressions = self._eval(ast, None)
         if self.limit:
-            return self.query.filter(expressions).limit(self.limit)
+            self.query = self.query.filter(expressions).limit(self.limit)
         else:
-            return self.query.filter(expressions)
+            self.query = self.query.filter(expressions)
+        return self.query
 
     def _eval(self, node, fieldname):
         name = node.getName()
@@ -160,22 +161,12 @@ class Producer(object):
                     value = '%' + value + '%'
                     expression = sText.text.like(value)
             elif fieldname in ['modifier', 'modified', 'type']:
-                if self.in_and:
-                    revision_alias = aliased(sRevision)
-                    self.query = self.query.join(revision_alias)
-                    if like:
-                        expression = (getattr(revision_alias,
-                            fieldname).like(value))
-                    else:
-                        expression = (getattr(revision_alias,
-                            fieldname) == value)
+                if like:
+                    expression = (getattr(sRevision,
+                        fieldname).like(value))
                 else:
-                    if like:
-                        expression = (getattr(sRevision,
-                            fieldname).like(value))
-                    else:
-                        expression = (getattr(sRevision,
-                            fieldname) == value)
+                    expression = (getattr(sRevision,
+                        fieldname) == value)
             else:
                 if self.in_and:
                     field_alias = aliased(sField)
