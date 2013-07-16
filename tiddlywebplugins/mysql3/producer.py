@@ -19,7 +19,7 @@ class Producer(object):
 
     def produce(self, ast, query, fulltext=False):
         """
-        Given an ast and an empty query, build that query into a 
+        Given an ast and an empty query, build that query into a
         full select, based on the info in the ast.
         """
         self.joined_revision = False

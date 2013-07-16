@@ -24,8 +24,8 @@ from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError
 
-from tiddlywebplugins.sqlalchemy3 import (Store as SQLStore,
-        sField, sTag, sText, sTiddler, sRevision, Base, Session)
+from tiddlywebplugins.sqlalchemy3 import (Store as SQLStore, sTiddler,
+        Base, Session)
 
 from tiddlyweb.filters import FilterIndexRefused
 

@@ -9,8 +9,8 @@ from tiddlyweb.store import Store
 from tiddlyweb.model.bag import Bag
 from tiddlyweb.model.tiddler import Tiddler
 
-from tiddlywebplugins.mysql3 import (Base, sText, sTag, sTiddler,
-        sRevision, sField, Session)
+from tiddlywebplugins.mysql3 import (Base, sTiddler,Session)
+from tiddlywebplugins.sqlalchemy3 import (sText, sTag, sRevision, sField)
 
 
 def setup_module(module):
