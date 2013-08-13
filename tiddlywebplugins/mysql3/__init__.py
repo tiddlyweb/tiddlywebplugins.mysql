@@ -21,7 +21,6 @@ from sqlalchemy.exc import ProgrammingError, DisconnectionError
 from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
 
 from tiddlyweb.model.tiddler import Tiddler
-from tiddlyweb.serializer import Serializer
 from tiddlyweb.store import StoreError
 
 from tiddlywebplugins.sqlalchemy3 import (Store as SQLStore, sTiddler,
@@ -77,10 +76,8 @@ class Store(SQLStore):
     """
 
     def __init__(self, store_config=None, environ=None):
-        self.serializer = Serializer('text')
-        self.parser = DEFAULT_PARSER
-        self.producer = Producer()
-        SQLStore.__init__(self, store_config, environ)
+        super(Store, self).__init__(store_config, environ)
+        self.has_geo = True
 
     def _init_store(self):
         """
@@ -116,72 +113,6 @@ class Store(SQLStore):
             SQLStore.tiddler_put(self, tiddler)
         except MySQLdb.Warning, exc:
             raise TypeError('mysql refuses to store tiddler: %s' % exc)
-
-    def search(self, search_query=''):
-        """
-        Do a search of of the database, using the 'q' query,
-        parsed by the parser and turned into a producer.
-        """
-        query = self.session.query(sTiddler).join('current')
-        if '_limit:' not in search_query:
-            default_limit = self.environ.get(
-                    'tiddlyweb.config', {}).get(
-                            'mysql.search_limit', '20')
-            search_query += ' _limit:%s' % default_limit
-        try:
-            try:
-                ast = self.parser(search_query)[0]
-                config = self.environ['tiddlyweb.config']
-                fulltext = config.get('mysql.fulltext', False)
-                query = self.producer.produce(ast, query, fulltext=fulltext)
-            except ParseException, exc:
-                raise StoreError('failed to parse search query: %s' % exc)
-
-            try:
-                for stiddler in query.all():
-                    try:
-                        yield Tiddler(unicode(stiddler.title),
-                                unicode(stiddler.bag))
-                    except AttributeError:
-                        stiddler = stiddler[0]
-                        yield Tiddler(unicode(stiddler.title),
-                                unicode(stiddler.bag))
-                self.session.close()
-            except ProgrammingError, exc:
-                raise StoreError('generated search SQL incorrect: %s' % exc)
-        except:
-            self.session.rollback()
-            raise
-
-
-def index_query(environ, **kwargs):
-    """
-    Attempt to optimize filter processing by using the search index
-    to provide results that can be matched.
-
-    In practice, this proves not to be that helpful when memcached
-    is being used, but it is in other situations.
-    """
-    store = environ['tiddlyweb.store']
-
-    queries = []
-    for key, value in kwargs.items():
-        if '"' in value:
-            # XXX The current parser is currently unable to deal with
-            # nested quotes. Rather than running the risk of tweaking
-            # the parser with unclear results, we instead just refuse
-            # for now. Later this can be fixed for real.
-            raise FilterIndexRefused('unable to process values with quotes')
-        queries.append('%s:"%s"' % (key, value))
-    query = ' '.join(queries)
-
-    storage = store.storage
-
-    try:
-        tiddlers = storage.search(search_query=query)
-        return (store.get(tiddler) for tiddler in tiddlers)
-    except StoreError, exc:
-        raise FilterIndexRefused('error in the store: %s' % exc)
 
 
 def _map_tables(config, tables):
