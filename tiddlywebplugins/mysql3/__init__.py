@@ -12,24 +12,13 @@ from __future__ import absolute_import, with_statement
 import warnings
 import MySQLdb
 
-from pyparsing import ParseException
-
 from sqlalchemy import event
 from sqlalchemy.engine import create_engine
-from sqlalchemy.exc import ProgrammingError, DisconnectionError
+from sqlalchemy.exc import DisconnectionError
 
 from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
 
-from tiddlyweb.model.tiddler import Tiddler
-from tiddlyweb.store import StoreError
-
-from tiddlywebplugins.sqlalchemy3 import (Store as SQLStore, sTiddler,
-        Base, Session)
-
-from tiddlyweb.filters import FilterIndexRefused
-
-from .parser import DEFAULT_PARSER
-from .producer import Producer
+from tiddlywebplugins.sqlalchemy3 import Store as SQLStore, Base, Session
 
 import logging
 
