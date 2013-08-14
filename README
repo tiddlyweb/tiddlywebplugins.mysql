@@ -54,6 +54,9 @@ sure the text table will be `MyISAM`.
 Note that even if fulltext is not turned on, text searches will still
 work, but not as flexibly.
 
+See <http://tiddlyweb-sql.tiddlyspace.com/> for additional documentation and
+assistance.
+
 Thanks
 ------
 
