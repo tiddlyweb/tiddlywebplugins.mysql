@@ -1,49 +1,61 @@
-A plugin for TiddlyWeb subclassing tiddlywebplugins.sqlalchemy3 with mysql specifics.
+tiddlywebplugins.mysql3
+=======================
+
+_A plugin for [TiddlyWeb](http://tiddlyweb.com) subclassing
+[tiddlywebplugins.sqlalchemy3](https://github.com/cdent/tiddlywebplugins.sqlalchemy)
+with MySQL specifics.
 
 The main additions to sqlalchemy3 are:
 
-* Optionally provide a reasonable search interface using mysql's fulltext.
-* Provide field based searches of tiddler attributes and fields.
+* Optionally extend the search interface using mysql's fulltext.
 * Support finding tiddlers that have geo.lat and geo.long fields
   near a location.
-* Provide an index_query method to allow the plugin to be used as
-  an 'indexer' for filters and determine_bag_for_tiddler.
 
-NOTES
+Setup
+-----
 
 MySQL 5.5 or beyond is required for full Unicode support.
 
 It is important to set some mysql my.cnf variables if you are using
 the fulltext indexing otherwise searches will likely fail.
 
+```
 [mysqld]
 ft_min_word_len = 3
 ft_stopword_file = ''
+```
 
-You will need to create a database. I use one called 'tiddlyweb':
+You will need to create a database:
 
-    create database tiddlyweb \
-        character set = utf8mb4 \
-        collate = utf8mb4_bin;
+```
+create database tiddlyweb character set = utf8mb4 collate = utf8mb4_bin;
+```
 
-Make sure you GRANT appropriate PRIVILEGES on the database.
+Make sure you `GRANT` appropriate `PRIVILEGES` on the database.
 
-Add the following to tiddlywebconfig.py:
+Add the following to `tiddlywebconfig.py`:
 
-    'server_store': ['tiddlywebplugins.mysql', {
-        'db_config': 'mysql:///tiddlyweb?charset=utf8mb4'}],
-    'indexer': 'tiddlywebplugins.mysql',
+```
+'server_store': ['tiddlywebplugins.mysql', {
+    'db_config': 'mysql:///tiddlyweb?charset=utf8mb4'}],
+'indexer': 'tiddlywebplugins.mysql', # optional
+```
 
 If you want to use the fulltext indexing capability you will need to
 create the fulltext index:
 
-    CREATE FULLTEXT INDEX tiddlytext ON text(text);
+```
+CREATE FULLTEXT INDEX tiddlytext ON text(text);
+```
 
-Also set 'mysql.fulltext' to True in tiddlywebconfig.py. This makes
-sure the text table is MyISAM.
+Also set `mysql.fulltext` to `True` in `tiddlywebconfig.py`. This makes
+sure the text table will be `MyISAM`.
 
 Note that even if fulltext is not turned on, text searches will still
 work, but not as flexibly.
 
-Thanks to Adrian Hosey <http://adrianhosey.blogspot.com/> for help over
+Thanks
+------
+
+Thanks to [Adrian Hosey](http://adrianhosey.blogspot.com/) for help over
 some SQL humps.
