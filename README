@@ -3,7 +3,7 @@ tiddlywebplugins.mysql3
 
 _A plugin for [TiddlyWeb](http://tiddlyweb.com) subclassing
 [tiddlywebplugins.sqlalchemy3](https://github.com/cdent/tiddlywebplugins.sqlalchemy)
-with MySQL specifics.
+with MySQL specifics._
 
 The main additions to sqlalchemy3 are:
 
