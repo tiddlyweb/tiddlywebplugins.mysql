@@ -18,7 +18,8 @@ from sqlalchemy.exc import DisconnectionError
 
 from sqlalchemy.dialects.mysql.base import VARCHAR, LONGTEXT
 
-from tiddlywebplugins.sqlalchemy3 import Store as SQLStore, Base, Session
+from tiddlywebplugins.sqlalchemy3 import (Store as SQLStore, Base, Session,
+        index_query)
 
 import logging
 
@@ -27,7 +28,7 @@ import logging
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 #logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 
-__version__ = '3.1.0'
+__version__ = '3.1.1'
 
 ENGINE = None
 MAPPED = False

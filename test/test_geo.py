@@ -7,7 +7,7 @@ from tiddlyweb.model.bag import Bag
 
 from tiddlywebplugins.utils import get_store
 
-from tiddlywebplugins.sqlalchemy3 import index_query
+from tiddlywebplugins.mysql3 import index_query
 from tiddlywebplugins.mysql3 import Base
 
 import py.test
