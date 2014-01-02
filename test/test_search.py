@@ -19,15 +19,15 @@ def setup_module(module):
     Base.metadata.create_all()
 
 def test_simple_store():
-    bag = Bag('bag1')
+    bag = Bag(u'bag1')
     store.put(bag)
-    tiddler = Tiddler('tiddler1', 'bag1')
+    tiddler = Tiddler(u'tiddler1', u'bag1')
     tiddler.text = u'oh hello i chrisdent have nothing to say here you know'
     tiddler.tags = [u'apple', u'orange', u'pear']
     tiddler.fields[u'house'] = u'cottage'
     store.put(tiddler)
 
-    retrieved = Tiddler('tiddler1', 'bag1')
+    retrieved = Tiddler(u'tiddler1', u'bag1')
     retrieved = store.get(retrieved)
 
     assert retrieved.text == tiddler.text
@@ -83,23 +83,23 @@ def test_index_query_filter_fields():
     assert tiddlers[0].fields['house'] == 'cottage'
 
 def test_search_right_revision():
-    tiddler = Tiddler('revised', 'bag1')
+    tiddler = Tiddler(u'revised', u'bag1')
     tiddler.text = u'alpha'
     tiddler.fields[u'house'] = u'cottage'
     store.put(tiddler)
-    tiddler = Tiddler('revised', 'bag1')
+    tiddler = Tiddler(u'revised', u'bag1')
     tiddler.text = u'beta'
     tiddler.fields[u'house'] = u'mansion'
     store.put(tiddler)
-    tiddler = Tiddler('revised', 'bag1')
+    tiddler = Tiddler(u'revised', u'bag1')
     tiddler.text = u'gamma'
     tiddler.fields[u'house'] = u'barn'
     store.put(tiddler)
-    tiddler = Tiddler('revised', 'bag1')
+    tiddler = Tiddler(u'revised', u'bag1')
     tiddler.text = u'delta'
     tiddler.fields[u'house'] = u'bungalow'
     store.put(tiddler)
-    tiddler = Tiddler('revised', 'bag1')
+    tiddler = Tiddler(u'revised', u'bag1')
     tiddler.text = u'epsilon'
     tiddler.fields[u'house'] = u'treehouse'
     store.put(tiddler)
@@ -139,18 +139,18 @@ def test_search_right_revision():
 def test_search_follow_syntax():
     QUERY = u'ftitle:GettingStarted (bag:cdent_public OR bag:fnd_public)'
 
-    store.put(Bag('fnd_public'))
-    store.put(Bag('cdent_public'))
-    tiddler = Tiddler('GettingStarted', 'fnd_public')
+    store.put(Bag(u'fnd_public'))
+    store.put(Bag(u'cdent_public'))
+    tiddler = Tiddler(u'GettingStarted', u'fnd_public')
     tiddler.text = u'fnd starts'
     tiddler.fields[u'house'] = u'treehouse'
     tiddler.fields[u'car'] = u'porsche'
     store.put(tiddler)
-    tiddler = Tiddler('GettingStarted', 'cdent_public')
+    tiddler = Tiddler(u'GettingStarted', u'cdent_public')
     tiddler.text = u'cdent starts'
     tiddler.fields[u'left-hand'] = u'well dirty'
     store.put(tiddler)
-    tiddler = Tiddler('other', 'cdent_public')
+    tiddler = Tiddler(u'other', u'cdent_public')
     tiddler.text = u'cdent starts'
     store.put(tiddler)
 
@@ -181,7 +181,7 @@ def test_search_arbitrarily_complex():
     assert len(tiddlers) == 1
 
 def test_field_with_dot():
-    tiddler = Tiddler('geoplace', 'cdent_public')
+    tiddler = Tiddler(u'geoplace', u'cdent_public')
     tiddler.text = u'some place somewhere'
     tiddler.fields[u'geo.lat'] = u'1.25'
     tiddler.fields[u'geo.long'] = u'-45.243'
@@ -219,7 +219,7 @@ def test_modified():
     additional revisions to make sure that joins are
     sufficiently limited.
     """
-    tiddler = Tiddler('GettingStarted', 'fnd_public')
+    tiddler = Tiddler(u'GettingStarted', u'fnd_public')
     tiddler.modifier = u'fnd';
     store.put(tiddler)
 
@@ -227,7 +227,7 @@ def test_modified():
 
     assert len(tiddlers) == 1
 
-    tiddler = Tiddler('GettingStarted', 'fnd_public')
+    tiddler = Tiddler(u'GettingStarted', u'fnd_public')
     tiddler.tags = [u'monkey', u'cow', u'food']
     tiddler.modifier = u'cdent';
     store.put(tiddler)
@@ -239,7 +239,7 @@ def test_modified():
 
     assert len(tiddlers) == 0
 
-    tiddler = Tiddler('GettingFancy', 'fnd_public')
+    tiddler = Tiddler(u'GettingFancy', u'fnd_public')
     tiddler.tags = [u'cow', u'food']
     tiddler.modifier = u'fnd';
     store.put(tiddler)
@@ -272,12 +272,12 @@ def test_not():
     assert len(tiddlers) == 1
 
 def test_or_tags():
-    tiddler = Tiddler('tagone', 'fnd_public')
+    tiddler = Tiddler(u'tagone', u'fnd_public')
     tiddler.text = 'hi @onething hello'
     tiddler.tags = ['one','three', 'five']
     store.put(tiddler)
 
-    tiddler = Tiddler('tagtwo', 'fnd_public')
+    tiddler = Tiddler(u'tagtwo', u'fnd_public')
     tiddler.text = 'hi @twothing hello'
     tiddler.tags = ['two', 'four', 'six']
     store.put(tiddler)
@@ -287,7 +287,7 @@ def test_or_tags():
     assert len(tiddlers) == 2
 
 def test_at_tags():
-    tiddler = Tiddler('tagat', 'fnd_public')
+    tiddler = Tiddler(u'tagat', u'fnd_public')
     tiddler.text = 'new stuff to not mess'
     tiddler.tags = ['one','three', 'five', '@cdent']
     store.put(tiddler)
@@ -297,7 +297,7 @@ def test_at_tags():
     assert len(tiddlers) == 1
 
 def test_paren_title():
-    tiddler = Tiddler('(i)', 'fnd_public')
+    tiddler = Tiddler(u'(i)', u'fnd_public')
     tiddler.text = 'hi @onething hello'
     tiddler.tags = ['one','three', 'five']
     store.put(tiddler)
@@ -318,7 +318,7 @@ def test_srevision_attr():
     assert len(tiddlers) == 0, tiddlers
 
 def test_tiddler_field_join():
-    tiddler = Tiddler('fieldtest', 'fnd_public')
+    tiddler = Tiddler(u'fieldtest', u'fnd_public')
     tiddler.text = 'hi again'
     tiddler.fields = {
             u'barney': u'evil',

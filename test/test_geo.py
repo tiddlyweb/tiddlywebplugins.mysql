@@ -22,21 +22,21 @@ def setup_module(module):
     Base.metadata.create_all()
 
 def test_simple_store():
-    bag = Bag('bag1')
+    bag = Bag(u'bag1')
     store.put(bag)
-    tiddler = Tiddler('place1', 'bag1')
+    tiddler = Tiddler(u'place1', u'bag1')
     tiddler.text = u'someplace nice'
     tiddler.tags = [u'toilet']
     tiddler.fields[u'geo.lat'] = u'10.5'
     tiddler.fields[u'geo.long'] = u'-10.5'
     store.put(tiddler)
 
-    retrieved = Tiddler('place1', 'bag1')
+    retrieved = Tiddler(u'place1', u'bag1')
     retrieved = store.get(retrieved)
 
     assert retrieved.text == tiddler.text
 
-    tiddler = Tiddler('not a place', 'bag1')
+    tiddler = Tiddler(u'not a place', u'bag1')
     tiddler.text = u'no where nice'
     store.put(tiddler)
 
@@ -65,7 +65,7 @@ def test_find_toilet():
     assert len(tiddlers) == 1
 
     # remove the toilet tag
-    tiddler = Tiddler('place1', 'bag1')
+    tiddler = Tiddler(u'place1', u'bag1')
     tiddler = store.get(tiddler)
     tiddler.tags = []
     store.put(tiddler)
